@@ -1,0 +1,34 @@
+name: WorkoutTracker
+options:
+  bundleIdPrefix: com.qerim.dlamsd02
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  WorkoutTracker:
+    type: application
+    platform: iOS
+    sources:
+      - path: WorkoutTracker
+    resources:
+      - path: WorkoutTracker/Resources/Fonts
+      - path: WorkoutTracker/Assets.xcassets
+    info:
+      path: WorkoutTracker/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIAppFonts:
+          - Manrope-Variable.ttf
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.qerim.dlamsd02.workouttracker
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1"
