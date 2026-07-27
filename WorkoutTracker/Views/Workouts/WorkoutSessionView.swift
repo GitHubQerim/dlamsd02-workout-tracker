@@ -120,10 +120,15 @@ struct WorkoutSessionView: View {
     @ViewBuilder
     private var strengthContent: some View {
         VStack(spacing: DSSpacing.cardGap) {
-            ForEach(viewModel.exerciseSections, id: \.name) { section in
+            ForEach(viewModel.exerciseSections) { section in
                 if section.name == activeExerciseName {
-                    activeExerciseCard(section)
-                        .id(section.name)
+                    ActiveExerciseCard(
+                        section: section,
+                        viewModel: viewModel,
+                        focusedField: $focusedField,
+                        onSetToggled: handleSetToggled
+                    )
+                    .id(section.name)
                 } else {
                     CollapsedExerciseRow(
                         name: section.name,
@@ -143,65 +148,18 @@ struct WorkoutSessionView: View {
         }
     }
 
-    @ViewBuilder
-    private func activeExerciseCard(_ section: (name: String, sets: [SetLog])) -> some View {
-        let isComplete = viewModel.isExerciseComplete(section.name)
-
-        DSCard(
-            padding: DSSpacing.s16,
-            background: isComplete ? DSColor.accentTrack.opacity(0.25) : DSColor.surfaceCard,
-            borderColor: isComplete ? DSColor.accent : .clear
-        ) {
-            VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
-                HStack {
-                    Text(section.name)
-                        .font(DSFont.body)
-                        .foregroundStyle(DSColor.textPrimary)
-                    if isComplete {
-                        DSIcon(name: "check", size: 16)
-                            .foregroundStyle(DSColor.accent)
-                    }
-                }
-
-                ForEach(section.sets) { setLog in
-                    setRow(setLog, exerciseName: section.name)
-                }
-
-                if let exercise = section.sets.first?.exercise {
-                    DSButton(title: "Satz hinzufügen", variant: .outline, fullWidth: true) {
-                        let last = section.sets.last
-                        viewModel.addSet(
-                            for: exercise,
-                            suggestedReps: last?.reps,
-                            suggestedWeightKg: last?.weightKg
-                        )
-                    }
-                }
+    /// Wird von `ActiveExerciseCard` nach jedem Satz-Toggle aufgerufen -
+    /// verwaltet den Übungsnamen für den Pausen-Timer-Kontext und die
+    /// Auto-Advance-Logik, weil `expandedExerciseName`/`restTimerExerciseName`
+    /// hier in `WorkoutSessionView`, nicht in der Karte, als State leben.
+    private func handleSetToggled(_ setLog: SetLog, exerciseName: String) {
+        guard setLog.isCompleted else { return }
+        restTimerExerciseName = exerciseName
+        if viewModel.isExerciseComplete(exerciseName) {
+            withAnimation(DSMotion.base) {
+                expandedExerciseName = viewModel.firstIncompleteExerciseName
             }
         }
-        .animation(DSMotion.base, value: isComplete)
-    }
-
-    @ViewBuilder
-    private func setRow(_ setLog: SetLog, exerciseName: String) -> some View {
-        SetRow(
-            setLog: setLog,
-            onUpdate: { reps, weightKg in
-                viewModel.updateSet(setLog, reps: reps, weightKg: weightKg)
-            },
-            onToggle: {
-                viewModel.toggleSetCompletion(setLog)
-                if setLog.isCompleted {
-                    restTimerExerciseName = exerciseName
-                    if viewModel.isExerciseComplete(exerciseName) {
-                        withAnimation(DSMotion.base) {
-                            expandedExerciseName = viewModel.firstIncompleteExerciseName
-                        }
-                    }
-                }
-            },
-            focusedField: $focusedField
-        )
     }
 
     @ViewBuilder

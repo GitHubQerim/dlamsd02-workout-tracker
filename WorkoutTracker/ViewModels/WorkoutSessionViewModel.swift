@@ -1,6 +1,33 @@
 import Foundation
 import SwiftData
 
+/// Eine Übung innerhalb der Session mit ihren Sätzen und - sofern aus einem
+/// Plan gestartet - dem zugehörigen Zielwert. Eigene Struct statt Tupel, um
+/// Drift zwischen ViewModel und den (mehreren) Views zu vermeiden, die
+/// darauf zugreifen.
+struct ExerciseSection: Identifiable {
+    let name: String
+    let sets: [SetLog]
+    let target: PlannedExercise?
+    var id: String { name }
+}
+
+/// Wertetyp-Snapshot eines Satzes aus einer vergangenen Session - bewusst
+/// kein `@Model`-Handle, damit die Vergleichs-Anzeige fremde, abgeschlossene
+/// Sätze nie versehentlich editieren kann.
+struct PreviousSetSnapshot: Identifiable {
+    let id = UUID()
+    let setIndex: Int
+    let reps: Int
+    let weightKg: Double
+}
+
+struct PreviousAttempt {
+    let date: Date
+    let planName: String?
+    let sets: [PreviousSetSnapshot]
+}
+
 /// Steuert eine laufende `WorkoutSession`. Dupliziert keine persistierten
 /// Felder als eigenen State - `session` ist bereits über `@Model` observable,
 /// die View bindet direkt gegen `session.startDate`/`session.notes`/etc.
@@ -59,8 +86,9 @@ final class WorkoutSessionViewModel: Identifiable {
     }
 
     /// Übungen in Plan-Reihenfolge (bzw. Erst-Auftrittsreihenfolge bei
-    /// freiem Training ohne Plan), jeweils mit ihren Sätzen.
-    var exerciseSections: [(name: String, sets: [SetLog])] {
+    /// freiem Training ohne Plan), jeweils mit ihren Sätzen und - sofern aus
+    /// einem Plan gestartet - dem zugehörigen Zielwert.
+    var exerciseSections: [ExerciseSection] {
         let orderedNames: [String]
         if let plan = session.plan {
             orderedNames = plan.plannedExercises
@@ -80,7 +108,11 @@ final class WorkoutSessionViewModel: Identifiable {
                 }
         }
         return orderedNames.map { name in
-            (name, session.setLogs.filter { $0.exerciseName == name }.sorted { $0.setIndex < $1.setIndex })
+            ExerciseSection(
+                name: name,
+                sets: session.setLogs.filter { $0.exerciseName == name }.sorted { $0.setIndex < $1.setIndex },
+                target: session.plan?.plannedExercises.first { $0.exerciseName == name }
+            )
         }
     }
 
@@ -95,6 +127,47 @@ final class WorkoutSessionViewModel: Identifiable {
     func isExerciseComplete(_ name: String) -> Bool {
         guard let section = exerciseSections.first(where: { $0.name == name }) else { return false }
         return !section.sets.isEmpty && section.sets.allSatisfy(\.isCompleted)
+    }
+
+    /// Nächster offener Satz einer Übung (erster mit `isCompleted == false`,
+    /// Reihenfolge über `setIndex`) - Grundlage für den "als nächstes dran"-
+    /// Indikator in der aktiven Übungskarte.
+    func nextIncompleteSetID(in exerciseName: String) -> PersistentIdentifier? {
+        exerciseSections
+            .first(where: { $0.name == exerciseName })?
+            .sets.first(where: { !$0.isCompleted })?
+            .persistentModelID
+    }
+
+    /// Letzte ABGESCHLOSSENE, andere Session, die mindestens einen Satz zu
+    /// `exerciseName` enthält - Grundlage für den "Letztes Mal"-Vergleich.
+    /// Bewusst kein `#Predicate` über die `setLogs`-Relationship (siehe ADR
+    /// 0001: SwiftData kann Relationship-Traversierung dort nicht zuverlässig
+    /// abbilden) - stattdessen ein einfacher, nach Datum sortierter Fetch
+    /// aller fremden abgeschlossenen Sessions, danach Swift-seitiger Scan
+    /// mit frühem Abbruch beim ersten Treffer.
+    func previousAttempt(for exerciseName: String) -> PreviousAttempt? {
+        let currentID = session.id
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate { $0.endDate != nil && $0.id != currentID },
+            sortBy: [SortDescriptor(\.startDate, order: .reverse)]
+        )
+        guard let candidates = try? context.fetch(descriptor) else { return nil }
+
+        for candidate in candidates {
+            let matchingSets = candidate.setLogs
+                .filter { $0.exerciseName == exerciseName }
+                .sorted { $0.setIndex < $1.setIndex }
+            guard !matchingSets.isEmpty else { continue }
+            return PreviousAttempt(
+                date: candidate.startDate,
+                planName: candidate.plan?.name,
+                sets: matchingSets.map {
+                    PreviousSetSnapshot(setIndex: $0.setIndex, reps: $0.reps, weightKg: $0.weightKg)
+                }
+            )
+        }
+        return nil
     }
 
     func toggleSetCompletion(_ setLog: SetLog) {

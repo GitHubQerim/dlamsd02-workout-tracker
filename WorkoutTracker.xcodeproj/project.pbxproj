@@ -22,6 +22,7 @@
 		576C74D76FD15C96406A071C /* SchemaV1+Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 229A4F2A427C46ED9E4C3FF4 /* SchemaV1+Exercise.swift */; };
 		5CF12E38399B2859CE23FFA7 /* SetRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D92FE7B4DEF77951ADFD9CA /* SetRow.swift */; };
 		6065E01251AC99E64B0A2216 /* WorkoutPlanEditorViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C51251DAC5DB6213C4A2DAD /* WorkoutPlanEditorViewModelTests.swift */; };
+		64BDFFF7D9773659541DCF26 /* PreviousSessionComparisonCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02FB8A6EE359FFE8DCB7D641 /* PreviousSessionComparisonCard.swift */; };
 		68C42F5BFCB2A59D0286F8AF /* WorkoutSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AC690E6F15746A8B4C2C44 /* WorkoutSessionView.swift */; };
 		70839D0DD6C394334055685D /* DSProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B3A8DDC438A069C669E5304 /* DSProgressRing.swift */; };
 		719DE629A492A528654F4E66 /* RestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C02823194615D7E26E386B3C /* RestTimerView.swift */; };
@@ -44,7 +45,9 @@
 		BB62661FAAE1B72D8962E38C /* DSCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E2CEEC7AA6D455458C8ED9C /* DSCard.swift */; };
 		BEF45BFD17E714BF734923FB /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5F756DBC2BDE32CEC156D9F /* Typography.swift */; };
 		C7303B7C33E99CEE63D8BD81 /* ActivityType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F7C443464076FF798316624 /* ActivityType.swift */; };
+		CA2A4E77015774218C7D4CA5 /* PlannedExerciseFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B64DA4F670E1A6B7A44DB0A /* PlannedExerciseFormatting.swift */; };
 		D252ABF7F32493AA02122785 /* SchemaV1.swift in Sources */ = {isa = PBXBuildFile; fileRef = E343F538B1185F0474A65F73 /* SchemaV1.swift */; };
+		E6C0AF7195A0B2DA6C259EFF /* ActiveExerciseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 135008F6E33561CD8B526489 /* ActiveExerciseCard.swift */; };
 		E8F14E95FDFED307B2DC2042 /* WorkoutTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48BD9386FBE1872BB0B6849 /* WorkoutTrackerApp.swift */; };
 		EAB5907339D101CCC12CDBCD /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44DF0B8D665CFD0171B24381 /* TestSupport.swift */; };
 		EDEBD13ED80684980689CFA4 /* ExerciseSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF513B74434682866955CBD /* ExerciseSeeder.swift */; };
@@ -68,7 +71,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		02FB8A6EE359FFE8DCB7D641 /* PreviousSessionComparisonCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviousSessionComparisonCard.swift; sourceTree = "<group>"; };
 		0708FC1DE47BA8E8E88A568D /* WorkoutsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutsView.swift; sourceTree = "<group>"; };
+		135008F6E33561CD8B526489 /* ActiveExerciseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveExerciseCard.swift; sourceTree = "<group>"; };
 		1576F058778640D9FED820FC /* DSButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSButton.swift; sourceTree = "<group>"; };
 		16036100EB46E8A6AED3563A /* Radius.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Radius.swift; sourceTree = "<group>"; };
 		1B3A8DDC438A069C669E5304 /* DSProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSProgressRing.swift; sourceTree = "<group>"; };
@@ -88,6 +93,7 @@
 		52C6FE587C01375FFA815EB3 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		54A273B85536E1C298F113E3 /* SchemaV1+SetLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+SetLog.swift"; sourceTree = "<group>"; };
 		59A871009FB535591864EAC0 /* SchemaV1+WorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+WorkoutSession.swift"; sourceTree = "<group>"; };
+		5B64DA4F670E1A6B7A44DB0A /* PlannedExerciseFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedExerciseFormatting.swift; sourceTree = "<group>"; };
 		5C1D2F378421F5BFF3660837 /* DSChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSChip.swift; sourceTree = "<group>"; };
 		5E0B2CD3EE9CD701D7B05AA4 /* SessionSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSource.swift; sourceTree = "<group>"; };
 		698FB46E5B1635F96AA0AA79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -215,8 +221,10 @@
 		89A30557B335145CF1EC224F /* Workouts */ = {
 			isa = PBXGroup;
 			children = (
+				135008F6E33561CD8B526489 /* ActiveExerciseCard.swift */,
 				B53BEB83DB8DC83FD8DC15A0 /* CollapsedExerciseRow.swift */,
 				1CDCCB752674FACD16E4C822 /* ExercisePickerView.swift */,
+				02FB8A6EE359FFE8DCB7D641 /* PreviousSessionComparisonCard.swift */,
 				C02823194615D7E26E386B3C /* RestTimerView.swift */,
 				8D92FE7B4DEF77951ADFD9CA /* SetRow.swift */,
 				AAFF735E98F3DA0BB6D5BA85 /* WorkoutPlanDetailView.swift */,
@@ -269,6 +277,7 @@
 			isa = PBXGroup;
 			children = (
 				4350E4AC950B9871AD1E134A /* DurationFormatting.swift */,
+				5B64DA4F670E1A6B7A44DB0A /* PlannedExerciseFormatting.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -405,6 +414,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E6C0AF7195A0B2DA6C259EFF /* ActiveExerciseCard.swift in Sources */,
 				C7303B7C33E99CEE63D8BD81 /* ActivityType.swift in Sources */,
 				EF319B063554676C3F9EBB82 /* ChallengeType.swift in Sources */,
 				F60CE417EDDFF11B6F52C831 /* ChallengesView.swift in Sources */,
@@ -424,6 +434,8 @@
 				EDEBD13ED80684980689CFA4 /* ExerciseSeeder.swift in Sources */,
 				84DE745B11CF1FF871AB6633 /* Motion.swift in Sources */,
 				FE6612CD8E1F8DF7EF79473D /* MuscleGroup.swift in Sources */,
+				CA2A4E77015774218C7D4CA5 /* PlannedExerciseFormatting.swift in Sources */,
+				64BDFFF7D9773659541DCF26 /* PreviousSessionComparisonCard.swift in Sources */,
 				9186A9CBEAE3172BC2EFC7E6 /* Radius.swift in Sources */,
 				719DE629A492A528654F4E66 /* RestTimerView.swift in Sources */,
 				1B26CD96147CFB25AEE922EF /* SchemaV1+Challenge.swift in Sources */,

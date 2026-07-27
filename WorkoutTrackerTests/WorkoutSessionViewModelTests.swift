@@ -206,4 +206,137 @@ struct WorkoutSessionViewModelTests {
 
         #expect(viewModel.restTimerDuration == 15)
     }
+
+    @Test func nextIncompleteSetIDReturnsFirstOpenSet() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise)
+        viewModel.addSet(for: exercise)
+        let firstSet = viewModel.session.setLogs.sorted { $0.setIndex < $1.setIndex }[0]
+        let secondSet = viewModel.session.setLogs.sorted { $0.setIndex < $1.setIndex }[1]
+
+        #expect(viewModel.nextIncompleteSetID(in: "Kniebeuge") == firstSet.persistentModelID)
+
+        viewModel.toggleSetCompletion(firstSet)
+
+        #expect(viewModel.nextIncompleteSetID(in: "Kniebeuge") == secondSet.persistentModelID)
+    }
+
+    @Test func nextIncompleteSetIDReturnsNilWhenAllCompleteOrUnknownExercise() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise)
+        viewModel.toggleSetCompletion(viewModel.session.setLogs[0])
+
+        #expect(viewModel.nextIncompleteSetID(in: "Kniebeuge") == nil)
+        #expect(viewModel.nextIncompleteSetID(in: "Unbekannt") == nil)
+    }
+
+    @Test func exerciseSectionsExposeTargetOnlyWhenPlanExists() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+        let plan = WorkoutPlan(name: "Testplan", activityType: .kraft)
+        context.insert(plan)
+        let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise, targetSets: 3, targetReps: 8, targetWeightKg: 60)
+        plannedExercise.plan = plan
+        context.insert(plannedExercise)
+        try context.save()
+
+        let planViewModel = WorkoutSessionViewModel.start(context: context, plan: plan, activityType: .kraft)
+        #expect(planViewModel.exerciseSections.first?.target?.exerciseName == "Kniebeuge")
+
+        let freeViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        freeViewModel.addSet(for: exercise)
+        #expect(freeViewModel.exerciseSections.first?.target == nil)
+    }
+
+    @Test func previousAttemptReturnsNilWithoutOtherCompletedSession() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+
+        #expect(viewModel.previousAttempt(for: "Kniebeuge") == nil)
+    }
+
+    @Test func previousAttemptIgnoresOpenSessions() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let openViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        openViewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 60)
+
+        let currentViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+
+        #expect(currentViewModel.previousAttempt(for: "Kniebeuge") == nil)
+    }
+
+    @Test func previousAttemptIgnoresNonMatchingExercise() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exerciseA = Exercise(name: "A")
+        context.insert(exerciseA)
+
+        let pastViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        pastViewModel.addSet(for: exerciseA, suggestedReps: 8, suggestedWeightKg: 60)
+        pastViewModel.finishSession()
+
+        let currentViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+
+        #expect(currentViewModel.previousAttempt(for: "B") == nil)
+    }
+
+    @Test func previousAttemptFindsMostRecentMatchingCompletedSession() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let olderViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        olderViewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 50)
+        olderViewModel.session.startDate = Date(timeIntervalSinceNow: -7200)
+        olderViewModel.finishSession()
+
+        let newerViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        newerViewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 60)
+        newerViewModel.session.startDate = Date(timeIntervalSinceNow: -3600)
+        newerViewModel.finishSession()
+
+        let currentViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+
+        let attempt = currentViewModel.previousAttempt(for: "Kniebeuge")
+        #expect(attempt?.sets.first?.weightKg == 60)
+    }
+
+    @Test func previousAttemptExcludesCurrentSessionEvenIfMatching() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        // Die aktuelle Session ist selbst abgeschlossen und würde auf den
+        // Fetch-Filter (endDate != nil, passende exerciseName) passen - muss
+        // trotzdem über den id-Ausschluss ignoriert werden, sonst würde
+        // previousAttempt sich mit sich selbst vergleichen.
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 60)
+        viewModel.toggleSetCompletion(viewModel.session.setLogs[0])
+        viewModel.finishSession()
+
+        #expect(viewModel.previousAttempt(for: "Kniebeuge") == nil)
+    }
 }
