@@ -110,4 +110,100 @@ struct WorkoutSessionViewModelTests {
 
         #expect(viewModel.exerciseSections.map(\.name) == ["B", "A"])
     }
+
+    @Test func firstIncompleteExerciseNameReturnsFirstExerciseWithOpenSet() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exerciseA = Exercise(name: "A")
+        let exerciseB = Exercise(name: "B")
+        context.insert(exerciseA)
+        context.insert(exerciseB)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exerciseA)
+        viewModel.addSet(for: exerciseB)
+
+        #expect(viewModel.firstIncompleteExerciseName == "A")
+    }
+
+    @Test func firstIncompleteExerciseNameSkipsCompletedExercises() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exerciseA = Exercise(name: "A")
+        let exerciseB = Exercise(name: "B")
+        context.insert(exerciseA)
+        context.insert(exerciseB)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exerciseA)
+        viewModel.addSet(for: exerciseB)
+        viewModel.toggleSetCompletion(viewModel.session.setLogs.first { $0.exerciseName == "A" }!)
+
+        #expect(viewModel.firstIncompleteExerciseName == "B")
+    }
+
+    @Test func firstIncompleteExerciseNameFallsBackToLastWhenAllComplete() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exerciseA = Exercise(name: "A")
+        let exerciseB = Exercise(name: "B")
+        context.insert(exerciseA)
+        context.insert(exerciseB)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exerciseA)
+        viewModel.addSet(for: exerciseB)
+        for setLog in viewModel.session.setLogs {
+            viewModel.toggleSetCompletion(setLog)
+        }
+
+        #expect(viewModel.firstIncompleteExerciseName == "B")
+    }
+
+    @Test func isExerciseCompleteReflectsSetCompletionState() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise)
+        viewModel.addSet(for: exercise)
+
+        #expect(viewModel.isExerciseComplete("Kniebeuge") == false)
+
+        for setLog in viewModel.session.setLogs {
+            viewModel.toggleSetCompletion(setLog)
+        }
+
+        #expect(viewModel.isExerciseComplete("Kniebeuge") == true)
+        #expect(viewModel.isExerciseComplete("Unbekannt") == false)
+    }
+
+    @Test func adjustRestDurationNeverTouchesStartDate() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise)
+        viewModel.toggleSetCompletion(viewModel.session.setLogs[0])
+        let startBefore = viewModel.restTimerStartDate
+
+        viewModel.adjustRestDuration(by: 10)
+        viewModel.adjustRestDuration(by: -10)
+
+        #expect(viewModel.restTimerStartDate == startBefore)
+    }
+
+    @Test func adjustRestDurationRespectsFifteenSecondFloor() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.adjustRestDuration(by: -1000)
+
+        #expect(viewModel.restTimerDuration == 15)
+    }
 }

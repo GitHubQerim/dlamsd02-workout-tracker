@@ -84,6 +84,19 @@ final class WorkoutSessionViewModel: Identifiable {
         }
     }
 
+    /// Sinnvoller Akkordeon-Default: erste Übung mit mindestens einem
+    /// offenen Satz, sonst (alles erledigt) die letzte Übung, damit nie
+    /// "nichts" aufgeklappt ist.
+    var firstIncompleteExerciseName: String? {
+        exerciseSections.first { $0.sets.contains { !$0.isCompleted } }?.name
+            ?? exerciseSections.last?.name
+    }
+
+    func isExerciseComplete(_ name: String) -> Bool {
+        guard let section = exerciseSections.first(where: { $0.name == name }) else { return false }
+        return !section.sets.isEmpty && section.sets.allSatisfy(\.isCompleted)
+    }
+
     func toggleSetCompletion(_ setLog: SetLog) {
         setLog.isCompleted.toggle()
         persist()

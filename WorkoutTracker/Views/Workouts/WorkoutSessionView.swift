@@ -5,39 +5,54 @@ import SwiftData
 /// versehentliches Wegwischen mitten im Satz). Gesamt-Timer läuft
 /// wall-clock-basiert über `TimelineView` gegen `session.startDate`
 /// (ADR 0003) - kein eigener Task/Timer im ViewModel.
+///
+/// Übungen erscheinen als Akkordeon: nur eine Übung ist gleichzeitig voll
+/// aufgeklappt (Sätze editierbar), alle anderen nur als eingeklappte Zeile.
+/// "Welche Übung ist aufgeklappt" ist reiner UI-State (`expandedExerciseName`)
+/// - der sinnvolle Default ("erste nicht abgehakte Übung") kommt dagegen aus
+/// dem ViewModel (`firstIncompleteExerciseName`), weil das echte Fachlogik
+/// über die Satz-Daten ist, keine UI-Deko (siehe ADR 0004).
 struct WorkoutSessionView: View {
     @Environment(\.dismiss) private var dismiss
     let viewModel: WorkoutSessionViewModel
 
     @State private var isPresentingExercisePicker = false
     @State private var isPresentingFinishDialog = false
+    @State private var expandedExerciseName: String?
+    @FocusState private var focusedField: SetRowField?
+
+    private var activeExerciseName: String? {
+        expandedExerciseName ?? viewModel.firstIncompleteExerciseName
+    }
 
     var body: some View {
         NavigationStack {
-            DSWashedScreen {
-                VStack(alignment: .leading, spacing: DSSpacing.sectionGap) {
-                    TimelineView(.periodic(from: viewModel.session.startDate, by: 1)) { context in
-                        DSStatTile(
-                            label: "Gesamtzeit",
-                            icon: "flame",
-                            value: context.date.timeIntervalSince(viewModel.session.startDate).formattedClock
-                        )
-                    }
+            ScrollViewReader { scrollProxy in
+                DSWashedScreen {
+                    VStack(alignment: .leading, spacing: DSSpacing.sectionGap) {
+                        TimelineView(.periodic(from: viewModel.session.startDate, by: 1)) { context in
+                            DSStatTile(
+                                label: "Gesamtzeit",
+                                icon: "flame",
+                                value: context.date.timeIntervalSince(viewModel.session.startDate).formattedClock
+                            )
+                        }
 
-                    if let restStart = viewModel.restTimerStartDate {
-                        RestTimerBanner(startDate: restStart, duration: viewModel.restTimerDuration) {
-                            viewModel.skipRestTimer()
+                        if viewModel.session.activityType.usesSetLogs {
+                            strengthContent
+                        } else {
+                            cardioContent
+                        }
+
+                        DSButton(title: "Training beenden", fullWidth: true) {
+                            isPresentingFinishDialog = true
                         }
                     }
-
-                    if viewModel.session.activityType.usesSetLogs {
-                        strengthContent
-                    } else {
-                        cardioContent
-                    }
-
-                    DSButton(title: "Training beenden", fullWidth: true) {
-                        isPresentingFinishDialog = true
+                }
+                .onChange(of: activeExerciseName) { _, newValue in
+                    guard let newValue else { return }
+                    withAnimation(DSMotion.base) {
+                        scrollProxy.scrollTo(newValue, anchor: .top)
                     }
                 }
             }
@@ -46,11 +61,24 @@ struct WorkoutSessionView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Schließen") { dismiss() }
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Fertig") { focusedField = nil }
+                }
             }
             .sheet(isPresented: $isPresentingExercisePicker) {
                 ExercisePickerView { exercise in
                     viewModel.addSet(for: exercise)
                 }
+            }
+            .fullScreenCover(item: restTimerBinding) { presentation in
+                RestTimerView(
+                    startDate: presentation.startDate,
+                    duration: viewModel.restTimerDuration,
+                    exerciseName: presentation.exerciseName,
+                    onAdjust: viewModel.adjustRestDuration(by:),
+                    onSkip: viewModel.skipRestTimer
+                )
             }
             .confirmationDialog("Training beenden?", isPresented: $isPresentingFinishDialog, titleVisibility: .visible) {
                 Button("Speichern & beenden") {
@@ -66,20 +94,44 @@ struct WorkoutSessionView: View {
         }
     }
 
+    /// Kleiner `Identifiable`-Wrapper für `.fullScreenCover(item:)` - der
+    /// Übungsname wird an der Abhak-Stelle festgehalten (siehe `setRow`),
+    /// weil dort bekannt ist, welche Übung gerade pausiert.
+    private struct RestTimerPresentation: Identifiable {
+        let startDate: Date
+        let exerciseName: String
+        var id: Date { startDate }
+    }
+
+    @State private var restTimerExerciseName: String = ""
+
+    private var restTimerBinding: Binding<RestTimerPresentation?> {
+        Binding(
+            get: {
+                guard let start = viewModel.restTimerStartDate else { return nil }
+                return RestTimerPresentation(startDate: start, exerciseName: restTimerExerciseName)
+            },
+            set: { newValue in
+                if newValue == nil { viewModel.skipRestTimer() }
+            }
+        )
+    }
+
     @ViewBuilder
     private var strengthContent: some View {
         VStack(spacing: DSSpacing.cardGap) {
             ForEach(viewModel.exerciseSections, id: \.name) { section in
-                DSCard {
-                    VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
-                        Text(section.name)
-                            .font(DSFont.body)
-                            .foregroundStyle(DSColor.textPrimary)
-
-                        ForEach(section.sets) { setLog in
-                            setLogRow(setLog)
-                        }
+                if section.name == activeExerciseName {
+                    activeExerciseCard(section)
+                        .id(section.name)
+                } else {
+                    CollapsedExerciseRow(
+                        name: section.name,
+                        isComplete: viewModel.isExerciseComplete(section.name)
+                    ) {
+                        withAnimation(DSMotion.base) { expandedExerciseName = section.name }
                     }
+                    .id(section.name)
                 }
             }
         }
@@ -92,47 +144,51 @@ struct WorkoutSessionView: View {
     }
 
     @ViewBuilder
-    private func setLogRow(_ setLog: SetLog) -> some View {
-        HStack(spacing: DSSpacing.stackGap) {
-            Button {
-                viewModel.toggleSetCompletion(setLog)
-            } label: {
-                DSIcon(name: setLog.isCompleted ? "check" : "rotate-ccw")
-                    .foregroundStyle(setLog.isCompleted ? DSColor.accent : DSColor.textTertiary)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Satz \(setLog.setIndex + 1), \(setLog.exerciseName)")
-            .accessibilityValue(setLog.isCompleted ? "erledigt" : "offen")
-            .accessibilityHint("Doppeltippen zum Abhaken")
-            .accessibilityAddTraits(setLog.isCompleted ? [.isSelected] : [])
-
-            Text("Satz \(setLog.setIndex + 1)")
-                .font(DSFont.caption)
-                .foregroundStyle(DSColor.textSecondary)
-                .accessibilityHidden(true)
-
-            Spacer()
-
-            Stepper(value: Binding(
-                get: { setLog.reps },
-                set: { viewModel.updateSet(setLog, reps: $0, weightKg: setLog.weightKg) }
-            ), in: 0...50) {
-                Text("\(setLog.reps) Wdh.")
-                    .font(DSFont.caption)
+    private func activeExerciseCard(_ section: (name: String, sets: [SetLog])) -> some View {
+        DSCard(padding: DSSpacing.s16) {
+            VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
+                Text(section.name)
+                    .font(DSFont.body)
                     .foregroundStyle(DSColor.textPrimary)
-            }
 
-            Stepper(value: Binding(
-                get: { setLog.weightKg },
-                set: { viewModel.updateSet(setLog, reps: setLog.reps, weightKg: $0) }
-            ), in: 0...300, step: 2.5) {
-                Text("\(setLog.weightKg, specifier: "%.1f") kg")
-                    .font(DSFont.caption)
-                    .foregroundStyle(DSColor.textPrimary)
+                ForEach(section.sets) { setLog in
+                    setRow(setLog, exerciseName: section.name)
+                }
+
+                if let exercise = section.sets.first?.exercise {
+                    DSButton(title: "Satz hinzufügen", variant: .outline, fullWidth: true) {
+                        let last = section.sets.last
+                        viewModel.addSet(
+                            for: exercise,
+                            suggestedReps: last?.reps,
+                            suggestedWeightKg: last?.weightKg
+                        )
+                    }
+                }
             }
         }
+    }
+
+    @ViewBuilder
+    private func setRow(_ setLog: SetLog, exerciseName: String) -> some View {
+        SetRow(
+            setLog: setLog,
+            onUpdate: { reps, weightKg in
+                viewModel.updateSet(setLog, reps: reps, weightKg: weightKg)
+            },
+            onToggle: {
+                viewModel.toggleSetCompletion(setLog)
+                if setLog.isCompleted {
+                    restTimerExerciseName = exerciseName
+                    if viewModel.isExerciseComplete(exerciseName) {
+                        withAnimation(DSMotion.base) {
+                            expandedExerciseName = viewModel.firstIncompleteExerciseName
+                        }
+                    }
+                }
+            },
+            focusedField: $focusedField
+        )
     }
 
     @ViewBuilder
