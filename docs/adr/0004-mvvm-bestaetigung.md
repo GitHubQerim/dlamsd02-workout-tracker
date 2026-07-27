@@ -21,3 +21,6 @@ Wir bleiben bei MVVM. Vom `architecture-reviewer` geprüft und bestätigt: Timer
 - Nutzer-Löschung? Nicht relevant für diese Entscheidung.
 - Migration weg? Ein Wechsel zu TCA wäre auch später noch möglich (ViewModels ließen sich schrittweise zu Reducern migrieren), aber nicht der Plan.
 - Löst die einfachste Option (MVVM, wie bisher) das Problem auch? Ja – vom architecture-reviewer explizit bestätigt für diesen Scope.
+
+## Nachtrag 2026-07-27 (Phase C): `@Observable` statt `ObservableObject`
+Die neuen ViewModels (`WorkoutPlanEditorViewModel`, `WorkoutSessionViewModel`) nutzen das `@Observable`-Makro (Observation-Framework) statt `ObservableObject`/`@Published` wie noch in DLAMSD01s `QuizViewModel`. Beide Stile sind mit MVVM vereinbar (diese ADR legt sich nur auf MVVM als Pattern fest, nicht auf einen bestimmten Observability-Mechanismus) – `@Observable` ist für iOS 26/Swift 6 der modernere, von Apple empfohlene Weg und spart das `@Published`-Boilerplate pro Property. Die eigentliche MVVM-Disziplin bleibt unverändert: `private(set)`-State, keine öffentlichen Setter, alle Mutationen laufen über benannte Methoden.

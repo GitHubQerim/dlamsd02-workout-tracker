@@ -7,6 +7,7 @@ struct DSProgressRing: View {
     var size: CGFloat = 128
     var thickness: CGFloat = 10
     var label: String
+    var labelFont: Font = DSFont.score
 
     private var progress: Double {
         max > 0 ? Double(value) / Double(max) : 0
@@ -22,8 +23,10 @@ struct DSProgressRing: View {
                 .rotationEffect(.degrees(-90))
                 .animation(DSMotion.base, value: progress)
             Text(label)
-                .font(DSFont.score)
+                .font(labelFont)
                 .foregroundColor(progress >= 1 ? DSColor.accent : DSColor.textSecondary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
         }
         .frame(width: size, height: size)
     }

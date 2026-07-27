@@ -4,6 +4,7 @@ import SwiftData
 @Model
 final class WorkoutPlan {
     var name: String
+    var activityType: ActivityType
     var createdAt: Date
 
     // .cascade: eine PlannedExercise-Zeile hat außerhalb ihres Plans
@@ -18,8 +19,9 @@ final class WorkoutPlan {
     @Relationship(deleteRule: .nullify, inverse: \WorkoutSession.plan)
     var sessions: [WorkoutSession] = []
 
-    init(name: String, createdAt: Date = .now) {
+    init(name: String, activityType: ActivityType = .kraft, createdAt: Date = .now) {
         self.name = name
+        self.activityType = activityType
         self.createdAt = createdAt
     }
 }
