@@ -5,6 +5,7 @@ import SwiftUI
 struct CollapsedExerciseRow: View {
     let name: String
     let isComplete: Bool
+    var namespace: Namespace.ID
     let action: () -> Void
 
     var body: some View {
@@ -13,6 +14,7 @@ struct CollapsedExerciseRow: View {
                 Text(name)
                     .font(DSFont.body)
                     .foregroundStyle(DSColor.textPrimary)
+                    .matchedGeometryEffect(id: "\(name)-title", in: namespace)
                 Spacer()
                 if isComplete {
                     DSIcon(name: "check", size: 16)
@@ -21,8 +23,9 @@ struct CollapsedExerciseRow: View {
             }
             .padding(.horizontal, DSSpacing.s16)
             .frame(minHeight: DSSpacing.tapMin)
-            .background(DSColor.surfaceCard2)
+            .background(isComplete ? DSColor.accentTrack.opacity(0.4) : DSColor.surfaceCard2)
             .clipShape(RoundedRectangle(cornerRadius: DSRadius.card, style: .continuous))
+            .matchedGeometryEffect(id: name, in: namespace)
         }
         .buttonStyle(DSPressable())
         .accessibilityLabel(name)

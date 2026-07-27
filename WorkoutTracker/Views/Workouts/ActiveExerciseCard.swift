@@ -13,6 +13,7 @@ struct ActiveExerciseCard: View {
     let section: ExerciseSection
     let viewModel: WorkoutSessionViewModel
     var focusedField: FocusState<SetRowField?>.Binding
+    var namespace: Namespace.ID
     let onSetToggled: (SetLog, String) -> Void
 
     @State private var previousAttempt: PreviousAttempt?
@@ -24,8 +25,7 @@ struct ActiveExerciseCard: View {
         VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
             DSCard(
                 padding: DSSpacing.s16,
-                background: isComplete ? DSColor.accentTrack.opacity(0.25) : DSColor.surfaceCard,
-                borderColor: isComplete ? DSColor.accent : .clear
+                background: isComplete ? DSColor.accentTrack.opacity(0.4) : DSColor.surfaceCard
             ) {
                 VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
                     HStack {
@@ -33,6 +33,7 @@ struct ActiveExerciseCard: View {
                             Text(section.name)
                                 .font(DSFont.body)
                                 .foregroundStyle(DSColor.textPrimary)
+                                .matchedGeometryEffect(id: "\(section.name)-title", in: namespace)
                             if let goal = section.target?.goalSummary {
                                 Text("Ziel: \(goal)")
                                     .font(DSFont.caption)
@@ -83,6 +84,7 @@ struct ActiveExerciseCard: View {
                     }
                 }
             }
+            .matchedGeometryEffect(id: section.name, in: namespace)
             .animation(DSMotion.base, value: isComplete)
 
             if let previousAttempt {
@@ -99,16 +101,12 @@ struct ActiveExerciseCard: View {
     /// nicht-interaktiver Stopp.
     private var columnHeader: some View {
         HStack(spacing: DSSpacing.stackGap) {
-            Color.clear.frame(width: SetRowLayout.badge)
-            HStack(spacing: DSSpacing.s8) {
-                Text("Wdh.").frame(minWidth: SetRowLayout.repsMin)
-                Text("×").opacity(0)
-                Text("Gewicht").frame(minWidth: SetRowLayout.weightMin)
-            }
-            Spacer(minLength: 0)
+            Text("Nr.").frame(minWidth: SetRowLayout.badge)
+            Text("Wdh. × Gewicht (kg)")
+                .frame(maxWidth: .infinity, alignment: .center)
             Color.clear.frame(width: SetRowLayout.toggle)
         }
-        .font(DSFont.caption)
+        .font(DSFont.tableHeader)
         .foregroundStyle(DSColor.textTertiary)
         .padding(.horizontal, DSSpacing.s12)
         .accessibilityHidden(true)
