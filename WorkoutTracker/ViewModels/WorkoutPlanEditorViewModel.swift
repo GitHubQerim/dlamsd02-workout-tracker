@@ -77,8 +77,17 @@ final class WorkoutPlanEditorViewModel {
         }
     }
 
-    func addExercise(_ exercise: Exercise) {
+    /// Verhindert, dass dieselbe Übung zweimal in denselben Plan aufgenommen
+    /// wird - sonst zeigt der Session-Screen sie als zwei getrennte Karten
+    /// mit jeweils bei 1 neu startender Satz-Nummerierung, was verwirrend ist.
+    @discardableResult
+    func addExercise(_ exercise: Exercise) -> Bool {
+        guard !drafts.contains(where: { $0.exercise.name == exercise.name }) else {
+            validationMessage = "\(exercise.name) ist bereits Teil dieses Workouts."
+            return false
+        }
         drafts.append(PlannedExerciseDraft(id: UUID(), exercise: exercise, existing: nil))
+        return true
     }
 
     func removeDraft(id: UUID) {

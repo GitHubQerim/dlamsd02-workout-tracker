@@ -15,6 +15,7 @@ struct ExercisePickerView: View {
     @State private var isPresentingNewExercise = false
     @State private var newExerciseName = ""
     @State private var newExerciseMuscleGroup: MuscleGroup = .ganzkoerper
+    @State private var newExerciseValidationMessage: String?
 
     private var filteredExercises: [Exercise] {
         guard let selectedMuscleGroup else { return exercises }
@@ -94,6 +95,10 @@ struct ExercisePickerView: View {
                         }
                     }
                 }
+                if let newExerciseValidationMessage {
+                    Text(newExerciseValidationMessage)
+                        .foregroundStyle(DSColor.incorrect)
+                }
             }
             .navigationTitle("Eigene Übung")
             .toolbar {
@@ -101,19 +106,43 @@ struct ExercisePickerView: View {
                     Button("Abbrechen") { isPresentingNewExercise = false }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Anlegen") {
-                        let trimmedName = newExerciseName.trimmingCharacters(in: .whitespaces)
-                        guard !trimmedName.isEmpty else { return }
-                        let exercise = Exercise(name: trimmedName, muscleGroup: newExerciseMuscleGroup, isCustom: true)
-                        modelContext.insert(exercise)
-                        try? modelContext.save()
-                        isPresentingNewExercise = false
-                        onSelect(exercise)
-                        dismiss()
-                    }
-                    .disabled(newExerciseName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button("Anlegen") { createCustomExercise() }
+                        .disabled(newExerciseName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }
+    }
+
+    /// `Exercise.name` ist im Datenmodell `@Attribute(.unique)`. Legt man
+    /// hier ungeprüft eine zweite Übung mit demselben Namen an, scheitert
+    /// entweder dieser Save (harmlos) oder - schlimmer - ein *späterer*,
+    /// scheinbar unabhängiger Save andernorts, weil das ungültige Objekt im
+    /// Context hängen bleibt. Deshalb: vorher explizit gegen den
+    /// bestehenden Katalog (case-insensitive) prüfen, bei Treffer die
+    /// vorhandene Übung auswählen statt eine zweite anzulegen.
+    private func createCustomExercise() {
+        let trimmedName = newExerciseName.trimmingCharacters(in: .whitespaces)
+        guard !trimmedName.isEmpty else { return }
+
+        if let existing = exercises.first(where: { $0.name.localizedCaseInsensitiveCompare(trimmedName) == .orderedSame }) {
+            isPresentingNewExercise = false
+            onSelect(existing)
+            dismiss()
+            return
+        }
+
+        let exercise = Exercise(name: trimmedName, muscleGroup: newExerciseMuscleGroup, isCustom: true)
+        modelContext.insert(exercise)
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.delete(exercise)
+            newExerciseValidationMessage = "Anlegen fehlgeschlagen: \(error.localizedDescription)"
+            return
+        }
+        newExerciseValidationMessage = nil
+        isPresentingNewExercise = false
+        onSelect(exercise)
+        dismiss()
     }
 }

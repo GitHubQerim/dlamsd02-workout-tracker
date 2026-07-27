@@ -94,4 +94,20 @@ struct WorkoutPlanEditorViewModelTests {
         #expect(Set(plan.plannedExercises.map(\.exerciseName)) == ["A", "C"])
         #expect(try context.fetchCount(FetchDescriptor<PlannedExercise>()) == 2)
     }
+
+    @Test func addExerciseRejectsDuplicateNameInSamePlan() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Bankdrücken")
+        context.insert(exercise)
+
+        let viewModel = WorkoutPlanEditorViewModel(context: context)
+        let firstAdd = viewModel.addExercise(exercise)
+        let secondAdd = viewModel.addExercise(exercise)
+
+        #expect(firstAdd == true)
+        #expect(secondAdd == false)
+        #expect(viewModel.drafts.count == 1)
+        #expect(viewModel.validationMessage != nil)
+    }
 }

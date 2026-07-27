@@ -28,20 +28,20 @@ struct SetRow: View {
         HStack(spacing: DSSpacing.stackGap) {
             Text("\(setLog.setIndex + 1)")
                 .font(DSFont.label)
-                .foregroundStyle(DSColor.textSecondary)
+                .foregroundStyle(setLog.isCompleted ? DSColor.textOnInvert : DSColor.textSecondary)
                 .frame(width: 28, height: 28)
-                .background(DSColor.surfaceCard2)
+                .background(setLog.isCompleted ? DSColor.accent : DSColor.surfaceCard2)
                 .clipShape(Circle())
                 .accessibilityHidden(true)
 
-            HStack(spacing: DSSpacing.s4) {
+            HStack(spacing: DSSpacing.s8) {
                 TextField("Wdh.", value: Binding(
                     get: { setLog.reps },
                     set: { onUpdate($0, setLog.weightKg) }
                 ), format: .number)
                 .keyboardType(.numberPad)
-                .multilineTextAlignment(.trailing)
-                .frame(minWidth: 32)
+                .multilineTextAlignment(.center)
+                .frame(minWidth: 36)
                 .focused(focusedField, equals: .reps(setLog.persistentModelID))
                 .accessibilityLabel("Wiederholungen, Satz \(setLog.setIndex + 1)")
 
@@ -54,12 +54,17 @@ struct SetRow: View {
                     set: { onUpdate(setLog.reps, $0) }
                 ), format: .number.precision(.fractionLength(0...1)))
                 .keyboardType(.decimalPad)
-                .frame(minWidth: 44)
+                .multilineTextAlignment(.center)
+                .frame(minWidth: 48)
                 .focused(focusedField, equals: .weight(setLog.persistentModelID))
                 .accessibilityLabel("Gewicht in Kilogramm, Satz \(setLog.setIndex + 1)")
+
+                Text("kg")
+                    .foregroundStyle(DSColor.textTertiary)
+                    .accessibilityHidden(true)
             }
             .font(DSFont.body)
-            .foregroundStyle(DSColor.textPrimary)
+            .foregroundStyle(setLog.isCompleted ? DSColor.textSecondary : DSColor.textPrimary)
 
             Spacer(minLength: 0)
 
@@ -84,6 +89,10 @@ struct SetRow: View {
             .accessibilityHint("Doppeltippen zum Abhaken")
             .accessibilityAddTraits(setLog.isCompleted ? [.isSelected] : [])
         }
-        .padding(.vertical, DSSpacing.s8)
+        .padding(.horizontal, DSSpacing.s12)
+        .padding(.vertical, DSSpacing.s12)
+        .background(setLog.isCompleted ? DSColor.accentTrack.opacity(0.4) : DSColor.surfaceCard2)
+        .clipShape(RoundedRectangle(cornerRadius: DSRadius.tile, style: .continuous))
+        .animation(DSMotion.fast, value: setLog.isCompleted)
     }
 }

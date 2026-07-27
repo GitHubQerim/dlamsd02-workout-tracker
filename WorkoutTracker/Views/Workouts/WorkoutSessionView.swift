@@ -145,11 +145,23 @@ struct WorkoutSessionView: View {
 
     @ViewBuilder
     private func activeExerciseCard(_ section: (name: String, sets: [SetLog])) -> some View {
-        DSCard(padding: DSSpacing.s16) {
+        let isComplete = viewModel.isExerciseComplete(section.name)
+
+        DSCard(
+            padding: DSSpacing.s16,
+            background: isComplete ? DSColor.accentTrack.opacity(0.25) : DSColor.surfaceCard,
+            borderColor: isComplete ? DSColor.accent : .clear
+        ) {
             VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
-                Text(section.name)
-                    .font(DSFont.body)
-                    .foregroundStyle(DSColor.textPrimary)
+                HStack {
+                    Text(section.name)
+                        .font(DSFont.body)
+                        .foregroundStyle(DSColor.textPrimary)
+                    if isComplete {
+                        DSIcon(name: "check", size: 16)
+                            .foregroundStyle(DSColor.accent)
+                    }
+                }
 
                 ForEach(section.sets) { setLog in
                     setRow(setLog, exerciseName: section.name)
@@ -167,6 +179,7 @@ struct WorkoutSessionView: View {
                 }
             }
         }
+        .animation(DSMotion.base, value: isComplete)
     }
 
     @ViewBuilder
