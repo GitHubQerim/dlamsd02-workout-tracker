@@ -4,6 +4,7 @@ import SwiftUI
 enum DSMotion {
     static let fast = Animation.easeOut(duration: 0.16)
     static let base = Animation.easeOut(duration: 0.24)
+    static let expand = Animation.spring(response: 0.35, dampingFraction: 0.75)
 
     /// Press-down scale for buttons/chips/cards, matching the source
     /// system's `scale(0.96)` + 70% opacity press feedback.

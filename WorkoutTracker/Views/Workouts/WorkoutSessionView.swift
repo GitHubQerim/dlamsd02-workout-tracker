@@ -20,6 +20,7 @@ struct WorkoutSessionView: View {
     @State private var isPresentingFinishDialog = false
     @State private var expandedExerciseName: String?
     @FocusState private var focusedField: SetRowField?
+    @Namespace private var expandNamespace
 
     private var activeExerciseName: String? {
         expandedExerciseName ?? viewModel.firstIncompleteExerciseName
@@ -31,11 +32,27 @@ struct WorkoutSessionView: View {
                 DSWashedScreen {
                     VStack(alignment: .leading, spacing: DSSpacing.sectionGap) {
                         TimelineView(.periodic(from: viewModel.session.startDate, by: 1)) { context in
-                            DSStatTile(
-                                label: "Gesamtzeit",
-                                icon: "flame",
-                                value: context.date.timeIntervalSince(viewModel.session.startDate).formattedClock
-                            )
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(viewModel.session.activityType.displayName)
+                                    .font(DSFont.score)
+                                    .foregroundStyle(DSColor.textPrimary)
+
+                                Spacer()
+
+                                VStack(alignment: .trailing, spacing: DSSpacing.s4) {
+                                    HStack(spacing: 5) {
+                                        DSIcon(name: "flame", size: 13)
+                                            .foregroundStyle(DSColor.textSecondary)
+                                        Text("Gesamtzeit")
+                                            .font(DSFont.caption)
+                                            .foregroundStyle(DSColor.textSecondary)
+                                    }
+                                    Text(context.date.timeIntervalSince(viewModel.session.startDate).formattedClock)
+                                        .font(DSFont.score)
+                                        .foregroundStyle(DSColor.textPrimary)
+                                        .monospacedDigit()
+                                }
+                            }
                         }
 
                         if viewModel.session.activityType.usesSetLogs {
@@ -56,10 +73,13 @@ struct WorkoutSessionView: View {
                     }
                 }
             }
-            .navigationTitle(viewModel.session.activityType.displayName)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Schließen") { dismiss() }
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                    }
+                    .accessibilityLabel("Schließen")
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -126,15 +146,17 @@ struct WorkoutSessionView: View {
                         section: section,
                         viewModel: viewModel,
                         focusedField: $focusedField,
+                        namespace: expandNamespace,
                         onSetToggled: handleSetToggled
                     )
                     .id(section.name)
                 } else {
                     CollapsedExerciseRow(
                         name: section.name,
-                        isComplete: viewModel.isExerciseComplete(section.name)
+                        isComplete: viewModel.isExerciseComplete(section.name),
+                        namespace: expandNamespace
                     ) {
-                        withAnimation(DSMotion.base) { expandedExerciseName = section.name }
+                        withAnimation(DSMotion.expand) { expandedExerciseName = section.name }
                     }
                     .id(section.name)
                 }
@@ -156,7 +178,7 @@ struct WorkoutSessionView: View {
         guard setLog.isCompleted else { return }
         restTimerExerciseName = exerciseName
         if viewModel.isExerciseComplete(exerciseName) {
-            withAnimation(DSMotion.base) {
+            withAnimation(DSMotion.expand) {
                 expandedExerciseName = viewModel.firstIncompleteExerciseName
             }
         }

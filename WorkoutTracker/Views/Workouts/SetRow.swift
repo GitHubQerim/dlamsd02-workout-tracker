@@ -72,15 +72,10 @@ struct SetRow: View {
                 .frame(minWidth: SetRowLayout.weightMin)
                 .focused(focusedField, equals: .weight(setLog.persistentModelID))
                 .accessibilityLabel("Gewicht in Kilogramm, Satz \(setLog.setIndex + 1)")
-
-                Text("kg")
-                    .foregroundStyle(DSColor.textTertiary)
-                    .accessibilityHidden(true)
             }
             .font(DSFont.body)
             .foregroundStyle(setLog.isCompleted ? DSColor.textSecondary : DSColor.textPrimary)
-
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .center)
 
             Button(action: onToggle) {
                 ZStack {

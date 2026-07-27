@@ -15,47 +15,54 @@ struct RestTimerView: View {
     let onSkip: () -> Void
 
     var body: some View {
-        TimelineView(.periodic(from: startDate, by: 1)) { context in
-            let elapsed = context.date.timeIntervalSince(startDate)
-            let remaining = max(0, duration - elapsed)
+        GeometryReader { outer in
+            TimelineView(.periodic(from: startDate, by: 1)) { context in
+                let elapsed = context.date.timeIntervalSince(startDate)
+                let remaining = max(0, duration - elapsed)
+                let isDone = remaining <= 0
 
-            DSWashedScreen {
-                VStack(spacing: DSSpacing.s24) {
-                    Spacer()
+                DSWashedScreen {
+                    VStack(spacing: DSSpacing.s24) {
+                        Spacer()
 
-                    Text("Pause nach \(exerciseName)")
-                        .font(DSFont.body)
-                        .foregroundStyle(DSColor.textSecondary)
-                        .multilineTextAlignment(.center)
+                        Text("Pause nach \(exerciseName)")
+                            .font(DSFont.body)
+                            .foregroundStyle(DSColor.textSecondary)
+                            .multilineTextAlignment(.center)
 
-                    DSProgressRing(
-                        value: min(Int(elapsed), Int(duration)),
-                        max: max(1, Int(duration)),
-                        size: 220,
-                        thickness: 14,
-                        label: remaining.formattedClock,
-                        labelFont: DSFont.manrope(size: 64, weight: 700)
-                    )
+                        DSProgressRing(
+                            value: min(Int(elapsed), Int(duration)),
+                            max: max(1, Int(duration)),
+                            size: 220,
+                            thickness: 14,
+                            label: remaining.formattedClock,
+                            labelFont: DSFont.manrope(size: 64, weight: 700)
+                        )
 
-                    HStack(spacing: DSSpacing.s24) {
-                        DSButton(title: "-10s", variant: .outline) {
-                            onAdjust(-10)
+                        HStack(spacing: DSSpacing.s24) {
+                            DSButton(title: "-10s", variant: .outline) {
+                                onAdjust(-10)
+                            }
+                            .accessibilityLabel("Pause um 10 Sekunden verkürzen")
+
+                            DSButton(title: "+10s", variant: .outline) {
+                                onAdjust(10)
+                            }
+                            .accessibilityLabel("Pause um 10 Sekunden verlängern")
                         }
-                        .accessibilityLabel("Pause um 10 Sekunden verkürzen")
 
-                        DSButton(title: "+10s", variant: .outline) {
-                            onAdjust(10)
+                        Spacer()
+
+                        DSButton(title: "Weiter", fullWidth: true) {
+                            onSkip()
                         }
-                        .accessibilityLabel("Pause um 10 Sekunden verlängern")
                     }
-
-                    Spacer()
-
-                    DSButton(title: "Weiter", fullWidth: true) {
-                        onSkip()
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: outer.size.height - 2 * DSSpacing.screenGutter)
+                    .onChange(of: isDone) { _, done in
+                        if done { onSkip() }
                     }
                 }
-                .frame(maxWidth: .infinity)
             }
         }
     }
