@@ -16,6 +16,8 @@ enum DSFont {
     static let body = manrope(size: 14, weight: 500)
     static let label = manrope(size: 12, weight: 500)
     static let caption = manrope(size: 11, weight: 500)
+    /// Same size as `body` so column headers stay aligned with the values below them under Dynamic Type.
+    static let tableHeader = manrope(size: 14, weight: 500)
     static let micro = manrope(size: 10, weight: 600)
     /// Extra role for the big result-screen score number — reuses the token
     /// scale's unused 34px step rather than inventing a new size.
