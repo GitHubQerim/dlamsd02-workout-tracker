@@ -60,11 +60,37 @@ final class WorkoutSessionViewModel: Identifiable {
     /// und persistiert sie sofort, damit sie auch bei App-Beendigung während
     /// der laufenden Session nicht verloren geht (siehe Re-Entrancy-Schutz
     /// in WorkoutsView/DashboardView).
-    static func start(context: ModelContext, plan: WorkoutPlan?, activityType: ActivityType) -> WorkoutSessionViewModel {
+    static func start(context: ModelContext, plan: Workout?, activityType: ActivityType) -> WorkoutSessionViewModel {
+        let session = makeSession(context: context, plan: plan, activityType: activityType)
+        try? context.save()
+        return WorkoutSessionViewModel(context: context, session: session)
+    }
+
+    /// Startet eine Session aus einem `WorkoutProgram`-Tag heraus und
+    /// stempelt den Programm-/Tag-Snapshot auf die Session (siehe Kommentar
+    /// an `WorkoutSession.programEntryID`). `nil`, wenn der Tag keinen
+    /// lebenden Workout-Link mehr hat (Workout wurde gelöscht) - die UI
+    /// blendet den Start-Button in diesem Fall ohnehin aus.
+    static func start(context: ModelContext, programEntry: WorkoutProgramEntry, programName: String) -> WorkoutSessionViewModel? {
+        guard let workout = programEntry.workout else { return nil }
+        let session = makeSession(context: context, plan: workout, activityType: workout.activityType)
+        session.programEntryID = programEntry.id
+        session.programName = programName
+        session.programDayLabel = programEntry.dayLabel
+        try? context.save()
+        return WorkoutSessionViewModel(context: context, session: session)
+    }
+
+    /// Baut Session + vorbefüllte Sätze/Segmente, speichert aber NICHT selbst
+    /// - beide `start`-Overloads speichern jeweils genau einmal, nachdem der
+    /// Programm-Fall zusätzlich noch die Snapshot-Felder gesetzt hat.
+    private static func makeSession(context: ModelContext, plan: Workout?, activityType: ActivityType) -> WorkoutSession {
         let session = WorkoutSession(activityType: activityType, plan: plan)
         context.insert(session)
 
-        if activityType.usesSetLogs, let plan {
+        guard let plan else { return session }
+
+        if activityType.usesSetLogs {
             for plannedExercise in plan.plannedExercises.sorted(by: { $0.orderIndex < $1.orderIndex }) {
                 guard let exercise = plannedExercise.exercise else { continue }
                 let setCount = max(1, plannedExercise.targetSets ?? 1)
@@ -79,10 +105,23 @@ final class WorkoutSessionViewModel: Identifiable {
                     context.insert(setLog)
                 }
             }
+        } else {
+            // Ziel wird Start-/Editierwert (analog zur Reps/Gewicht-
+            // Vorbefüllung bei Kraft) - der Nutzer passt während der Session
+            // an, was tatsächlich gelaufen ist.
+            for segment in plan.segments.sorted(by: { $0.orderIndex < $1.orderIndex }) {
+                let segmentLog = SegmentLog(
+                    orderIndex: segment.orderIndex,
+                    label: segment.label,
+                    distanceMeters: segment.targetDistanceMeters,
+                    durationSeconds: segment.targetDurationSeconds
+                )
+                segmentLog.session = session
+                context.insert(segmentLog)
+            }
         }
 
-        try? context.save()
-        return WorkoutSessionViewModel(context: context, session: session)
+        return session
     }
 
     /// Übungen in Plan-Reihenfolge (bzw. Erst-Auftrittsreihenfolge bei
@@ -211,8 +250,34 @@ final class WorkoutSessionViewModel: Identifiable {
         restTimerDuration = max(15, restTimerDuration + delta)
     }
 
-    func updateCardioMetrics(distanceMeters: Double?, averageHeartRate: Int?) {
-        session.distanceMeters = distanceMeters
+    /// Sortierte Segmente der Session - Cardio-Äquivalent zu `exerciseSections`.
+    /// Keine eigene Struct nötig: `SegmentLog` trägt Label/Werte/Status
+    /// bereits direkt (anders als Kraft, wo `ExerciseSection` Sätze unter
+    /// einem Übungsnamen gruppiert - Segmente haben keine solche Verschachtelung).
+    var segmentSections: [SegmentLog] {
+        session.segmentLogs.sorted { $0.orderIndex < $1.orderIndex }
+    }
+
+    func toggleSegmentCompletion(_ segmentLog: SegmentLog) {
+        segmentLog.isCompleted.toggle()
+        persist()
+    }
+
+    func updateSegment(_ segmentLog: SegmentLog, distanceMeters: Double?, durationSeconds: Double?) {
+        segmentLog.distanceMeters = distanceMeters
+        segmentLog.durationSeconds = durationSeconds
+        persist()
+    }
+
+    /// Ad-hoc-Segment fürs freie Training - analog zu `addSet(for:)`.
+    func addSegment(label: String) {
+        let segmentLog = SegmentLog(orderIndex: session.segmentLogs.count, label: label)
+        segmentLog.session = session
+        context.insert(segmentLog)
+        persist()
+    }
+
+    func updateAverageHeartRate(_ averageHeartRate: Int?) {
         session.averageHeartRate = averageHeartRate
         persist()
     }
@@ -224,8 +289,16 @@ final class WorkoutSessionViewModel: Identifiable {
 
     func finishSession() {
         assert(
-            !(session.activityType.usesSetLogs && (session.distanceMeters != nil || session.averageHeartRate != nil)),
-            "Kraft-Sessions dürfen keine Cardio-Metriken tragen"
+            !(session.activityType.usesSetLogs && !session.segmentLogs.isEmpty),
+            "Kraft-Sessions dürfen keine SegmentLogs tragen"
+        )
+        assert(
+            !(session.activityType.usesSetLogs && session.averageHeartRate != nil),
+            "Kraft-Sessions dürfen keinen Puls tragen"
+        )
+        assert(
+            session.activityType.usesSetLogs || session.setLogs.isEmpty,
+            "Cardio-Sessions dürfen keine SetLogs tragen"
         )
         session.endDate = .now
         restTimerStartDate = nil

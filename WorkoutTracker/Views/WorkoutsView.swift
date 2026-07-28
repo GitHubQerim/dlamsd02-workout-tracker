@@ -3,10 +3,12 @@ import SwiftData
 
 struct WorkoutsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \WorkoutPlan.createdAt, order: .reverse) private var plans: [WorkoutPlan]
+    @Query(sort: \Workout.createdAt, order: .reverse) private var plans: [Workout]
+    @Query(sort: \WorkoutProgram.createdAt, order: .reverse) private var programs: [WorkoutProgram]
     @Query(filter: #Predicate<WorkoutSession> { $0.endDate == nil }) private var openSessions: [WorkoutSession]
 
     @State private var isPresentingNewPlan = false
+    @State private var isPresentingNewProgram = false
     @State private var freeTrainingSessionViewModel: WorkoutSessionViewModel?
 
     private var hasOpenSession: Bool { !openSessions.isEmpty }
@@ -16,6 +18,28 @@ struct WorkoutsView: View {
             VStack(alignment: .leading, spacing: DSSpacing.sectionGap) {
                 if let openSession = openSessions.first {
                     openSessionBanner(openSession)
+                }
+
+                Text("Deine Pläne")
+                    .font(DSFont.label)
+                    .foregroundStyle(DSColor.textSecondary)
+
+                DSButton(title: "Plan erstellen", icon: "calendar", fullWidth: true) {
+                    isPresentingNewProgram = true
+                }
+                .disabled(hasOpenSession)
+
+                if !programs.isEmpty {
+                    VStack(spacing: DSSpacing.cardGap) {
+                        ForEach(programs) { program in
+                            NavigationLink {
+                                WorkoutProgramDetailView(program: program)
+                            } label: {
+                                programCard(program)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
 
                 DSButton(title: "Neues Workout", icon: "dumbbell", fullWidth: true) {
@@ -31,7 +55,7 @@ struct WorkoutsView: View {
                     VStack(spacing: DSSpacing.cardGap) {
                         ForEach(plans) { plan in
                             NavigationLink {
-                                WorkoutPlanDetailView(plan: plan)
+                                WorkoutDetailView(plan: plan)
                             } label: {
                                 DSCard {
                                     HStack {
@@ -74,10 +98,38 @@ struct WorkoutsView: View {
         }
         .navigationTitle("Workouts")
         .sheet(isPresented: $isPresentingNewPlan) {
-            WorkoutPlanEditorView(context: modelContext)
+            WorkoutEditorView(context: modelContext)
+        }
+        .sheet(isPresented: $isPresentingNewProgram) {
+            WorkoutProgramEditorView(context: modelContext)
         }
         .fullScreenCover(item: $freeTrainingSessionViewModel) { sessionViewModel in
             WorkoutSessionView(viewModel: sessionViewModel)
+        }
+    }
+
+    @ViewBuilder
+    private func programCard(_ program: WorkoutProgram) -> some View {
+        DSCard {
+            VStack(alignment: .leading, spacing: DSSpacing.s4) {
+                HStack {
+                    Text(program.name)
+                        .font(DSFont.body)
+                        .foregroundStyle(DSColor.textPrimary)
+                    if program.isDefault {
+                        DSChip(title: "Standard", active: true) {}
+                    }
+                    Spacer()
+                }
+                Text("\(program.entries.count) Tage")
+                    .font(DSFont.caption)
+                    .foregroundStyle(DSColor.textTertiary)
+                if program.isDefault, let next = program.nextEntry(in: modelContext) {
+                    Text(next.nextDayDisplayText)
+                        .font(DSFont.caption)
+                        .foregroundStyle(DSColor.accent)
+                }
+            }
         }
     }
 

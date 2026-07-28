@@ -1,12 +1,12 @@
 import SwiftUI
 import SwiftData
 
-/// Read-only Übersicht eines `WorkoutPlan` mit den Aktionen "Bearbeiten"
+/// Read-only Übersicht eines `Workout` mit den Aktionen "Bearbeiten"
 /// und "Training starten".
-struct WorkoutPlanDetailView: View {
+struct WorkoutDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<WorkoutSession> { $0.endDate == nil }) private var openSessions: [WorkoutSession]
-    let plan: WorkoutPlan
+    let plan: Workout
 
     @State private var isPresentingEditor = false
     @State private var activeSessionViewModel: WorkoutSessionViewModel?
@@ -21,21 +21,40 @@ struct WorkoutPlanDetailView: View {
                 DSChip(title: plan.activityType.displayName, active: true) {}
 
                 VStack(spacing: DSSpacing.cardGap) {
-                    ForEach(plan.plannedExercises.sorted(by: { $0.orderIndex < $1.orderIndex })) { plannedExercise in
-                        DSCard {
-                            HStack {
-                                Text(plannedExercise.exerciseName)
-                                    .font(DSFont.body)
-                                    .foregroundStyle(DSColor.textPrimary)
-                                Spacer()
-                                if plan.activityType.usesSetLogs {
+                    if plan.activityType.usesSetLogs {
+                        ForEach(plan.plannedExercises.sorted(by: { $0.orderIndex < $1.orderIndex })) { plannedExercise in
+                            DSCard {
+                                HStack {
+                                    Text(plannedExercise.exerciseName)
+                                        .font(DSFont.body)
+                                        .foregroundStyle(DSColor.textPrimary)
+                                    Spacer()
                                     Text("\(plannedExercise.targetSets ?? 0) × \(plannedExercise.targetReps ?? 0)")
                                         .font(DSFont.caption)
                                         .foregroundStyle(DSColor.textSecondary)
-                                } else if let distance = plannedExercise.targetDistanceMeters {
-                                    Text("\(Int(distance / 1000)) km")
-                                        .font(DSFont.caption)
-                                        .foregroundStyle(DSColor.textSecondary)
+                                }
+                            }
+                        }
+                    } else {
+                        ForEach(plan.segments.sorted(by: { $0.orderIndex < $1.orderIndex })) { segment in
+                            DSCard {
+                                HStack {
+                                    Text(segment.label)
+                                        .font(DSFont.body)
+                                        .foregroundStyle(DSColor.textPrimary)
+                                    Spacer()
+                                    VStack(alignment: .trailing, spacing: DSSpacing.s4) {
+                                        if let distance = segment.targetDistanceMeters {
+                                            Text("\(Int(distance / 1000)) km")
+                                                .font(DSFont.caption)
+                                                .foregroundStyle(DSColor.textSecondary)
+                                        }
+                                        if let duration = segment.targetDurationSeconds {
+                                            Text("\(Int(duration / 60)) Min.")
+                                                .font(DSFont.caption)
+                                                .foregroundStyle(DSColor.textSecondary)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -64,7 +83,7 @@ struct WorkoutPlanDetailView: View {
         }
         .navigationTitle("Workout")
         .sheet(isPresented: $isPresentingEditor) {
-            WorkoutPlanEditorView(context: modelContext, editing: plan)
+            WorkoutEditorView(context: modelContext, editing: plan)
         }
         .fullScreenCover(item: $activeSessionViewModel) { sessionViewModel in
             WorkoutSessionView(viewModel: sessionViewModel)

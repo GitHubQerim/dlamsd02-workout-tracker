@@ -184,26 +184,73 @@ struct WorkoutSessionView: View {
         }
     }
 
+    /// Flache, nicht-akkordierende Liste - Segmente sind typischerweise
+    /// wenige (2-4) und anders als Kraft's Übung→Sätze nicht weiter
+    /// verschachtelt, daher kein Accordion/`matchedGeometryEffect` nötig.
     @ViewBuilder
     private var cardioContent: some View {
+        VStack(spacing: DSSpacing.cardGap) {
+            ForEach(viewModel.segmentSections) { segmentLog in
+                segmentRow(segmentLog)
+            }
+        }
+
+        if viewModel.session.plan == nil {
+            DSButton(title: "Segment hinzufügen", icon: "flame", variant: .outline, fullWidth: true) {
+                viewModel.addSegment(label: "Segment \(viewModel.segmentSections.count + 1)")
+            }
+        }
+
         DSCard {
+            Stepper(value: Binding(
+                get: { viewModel.session.averageHeartRate ?? 0 },
+                set: { viewModel.updateAverageHeartRate($0) }
+            ), in: 0...220) {
+                Text("Ø Puls: \(viewModel.session.averageHeartRate ?? 0)")
+                    .font(DSFont.body)
+                    .foregroundStyle(DSColor.textPrimary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func segmentRow(_ segmentLog: SegmentLog) -> some View {
+        DSCard(background: segmentLog.isCompleted ? DSColor.accentTrack.opacity(0.4) : DSColor.surfaceCard) {
             VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
-                Stepper(value: Binding(
-                    get: { viewModel.session.distanceMeters ?? 0 },
-                    set: { viewModel.updateCardioMetrics(distanceMeters: $0, averageHeartRate: viewModel.session.averageHeartRate) }
-                ), in: 0...100_000, step: 100) {
-                    Text("Distanz: \((viewModel.session.distanceMeters ?? 0) / 1000, specifier: "%.1f") km")
+                HStack {
+                    Text(segmentLog.label)
                         .font(DSFont.body)
                         .foregroundStyle(DSColor.textPrimary)
+                    Spacer()
+                    Button(action: { viewModel.toggleSegmentCompletion(segmentLog) }) {
+                        DSIcon(name: "check", size: 18)
+                            .foregroundStyle(segmentLog.isCompleted ? DSColor.accent : DSColor.textTertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(segmentLog.label) abhaken")
+                    .accessibilityValue(segmentLog.isCompleted ? "erledigt" : "offen")
                 }
 
-                Stepper(value: Binding(
-                    get: { viewModel.session.averageHeartRate ?? 0 },
-                    set: { viewModel.updateCardioMetrics(distanceMeters: viewModel.session.distanceMeters, averageHeartRate: $0) }
-                ), in: 0...220) {
-                    Text("Ø Puls: \(viewModel.session.averageHeartRate ?? 0)")
-                        .font(DSFont.body)
-                        .foregroundStyle(DSColor.textPrimary)
+                if let fieldOptions = viewModel.session.activityType.cardioFieldOptions, fieldOptions.showsDistance {
+                    Stepper(value: Binding(
+                        get: { segmentLog.distanceMeters ?? 0 },
+                        set: { viewModel.updateSegment(segmentLog, distanceMeters: $0, durationSeconds: segmentLog.durationSeconds) }
+                    ), in: 0...100_000, step: 100) {
+                        Text("Distanz: \((segmentLog.distanceMeters ?? 0) / 1000, specifier: "%.1f") km")
+                            .font(DSFont.caption)
+                            .foregroundStyle(DSColor.textSecondary)
+                    }
+                }
+
+                if let fieldOptions = viewModel.session.activityType.cardioFieldOptions, fieldOptions.showsDuration {
+                    Stepper(value: Binding(
+                        get: { (segmentLog.durationSeconds ?? 0) / 60 },
+                        set: { viewModel.updateSegment(segmentLog, distanceMeters: segmentLog.distanceMeters, durationSeconds: $0 * 60) }
+                    ), in: 0...180) {
+                        Text("Dauer: \(Int((segmentLog.durationSeconds ?? 0) / 60)) Min.")
+                            .font(DSFont.caption)
+                            .foregroundStyle(DSColor.textSecondary)
+                    }
                 }
             }
         }

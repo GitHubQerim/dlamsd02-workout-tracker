@@ -8,6 +8,7 @@ struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WorkoutSession.startDate, order: .reverse) private var sessions: [WorkoutSession]
     @Query(filter: #Predicate<WorkoutSession> { $0.endDate == nil }) private var openSessions: [WorkoutSession]
+    @Query(filter: #Predicate<WorkoutProgram> { $0.isDefault == true }) private var defaultPrograms: [WorkoutProgram]
 
     @State private var resumedSessionViewModel: WorkoutSessionViewModel?
 
@@ -20,6 +21,15 @@ struct DashboardView: View {
         return completedSessions.filter {
             calendar.isDate($0.startDate, equalTo: .now, toGranularity: .weekOfYear)
         }.count
+    }
+
+    /// Zeigt Programm-Tag + Programmname, sofern die Session aus einem
+    /// WorkoutProgram gestartet wurde, sonst wie bisher nur die Sportart.
+    private func lastTrainingDisplayText(for session: WorkoutSession) -> String {
+        guard let programDayLabel = session.programDayLabel, let programName = session.programName else {
+            return session.activityType.displayName
+        }
+        return "\(programDayLabel) · \(programName)"
     }
 
     var body: some View {
@@ -47,9 +57,33 @@ struct DashboardView: View {
                 HStack(spacing: DSSpacing.cardGap) {
                     DSStatTile(label: "Diese Woche", icon: "chart-column", value: "\(sessionsThisWeek)")
                     if let lastSession = completedSessions.first {
-                        DSStatTile(label: "Letztes Training", icon: "flame", value: lastSession.activityType.displayName)
+                        DSStatTile(label: "Letztes Training", icon: "flame", value: lastTrainingDisplayText(for: lastSession))
                     } else {
                         DSStatTile(label: "Letztes Training", icon: "flame", value: "-")
+                    }
+                }
+
+                if let defaultProgram = defaultPrograms.first, let nextEntry = defaultProgram.nextEntry(in: modelContext) {
+                    DSCard {
+                        HStack {
+                            VStack(alignment: .leading, spacing: DSSpacing.s4) {
+                                Text(defaultProgram.name)
+                                    .font(DSFont.label)
+                                    .foregroundStyle(DSColor.textSecondary)
+                                Text(nextEntry.nextDayDisplayText)
+                                    .font(DSFont.body)
+                                    .foregroundStyle(DSColor.textPrimary)
+                            }
+                            Spacer()
+                            DSButton(title: "Starten", variant: .outline) {
+                                resumedSessionViewModel = WorkoutSessionViewModel.start(
+                                    context: modelContext,
+                                    programEntry: nextEntry,
+                                    programName: defaultProgram.name
+                                )
+                            }
+                            .disabled(!openSessions.isEmpty || nextEntry.workout == nil)
+                        }
                     }
                 }
 
