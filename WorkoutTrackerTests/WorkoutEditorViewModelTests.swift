@@ -3,7 +3,7 @@ import SwiftData
 @testable import WorkoutTracker
 
 @MainActor
-struct WorkoutPlanEditorViewModelTests {
+struct WorkoutEditorViewModelTests {
     @Test func loadsExistingDraftsSortedByOrderIndex() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
@@ -13,7 +13,7 @@ struct WorkoutPlanEditorViewModelTests {
         context.insert(exerciseA)
         context.insert(exerciseB)
 
-        let plan = WorkoutPlan(name: "Testplan", activityType: .kraft)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
         context.insert(plan)
 
         let secondExercise = PlannedExercise(orderIndex: 1, exercise: exerciseB, targetSets: 3, targetReps: 8)
@@ -25,34 +25,73 @@ struct WorkoutPlanEditorViewModelTests {
 
         try context.save()
 
-        let viewModel = WorkoutPlanEditorViewModel(context: context, editing: plan)
+        let viewModel = WorkoutEditorViewModel(context: context, editing: plan)
 
         #expect(viewModel.drafts.map(\.exercise.name) == ["A", "B"])
     }
 
-    @Test func updateActivityTypeClearsUnusedFields() throws {
+    /// Blocker-Fund aus dem architecture-reviewer-Pass (ADR 0009): Kraft und
+    /// Cardio nutzen getrennte Listen (`drafts`/`segmentDrafts`) statt
+    /// geteilter nilable Felder - `save()` muss deshalb bei jedem Speichern
+    /// die gerade inaktive Seite komplett leeren, sonst blieben beim
+    /// Umschalten eines bestehenden Plans tote Zeilen der alten Sportart in
+    /// der DB hängen.
+    @Test func switchingActivityTypeOnExistingPlanClearsInactiveSide() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
         let exercise = Exercise(name: "Kniebeuge")
         context.insert(exercise)
 
-        let viewModel = WorkoutPlanEditorViewModel(context: context)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
+        context.insert(plan)
+        let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise, targetSets: 3, targetReps: 10)
+        plannedExercise.plan = plan
+        context.insert(plannedExercise)
+        try context.save()
+
+        let viewModel = WorkoutEditorViewModel(context: context, editing: plan)
+        viewModel.updateActivityType(.radfahren)
+        viewModel.addSegment()
+
+        let saved = viewModel.save()
+
+        #expect(saved == true)
+        #expect(plan.plannedExercises.isEmpty)
+        #expect(plan.segments.count == 1)
+        #expect(try context.fetchCount(FetchDescriptor<PlannedExercise>()) == 0)
+    }
+
+    @Test func switchingActivityTypeBackToKraftClearsSegments() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let plan = Workout(name: "Testplan", activityType: .radfahren)
+        context.insert(plan)
+        let segment = PlannedSegment(orderIndex: 0, label: "Warmup", targetDistanceMeters: 5000)
+        segment.plan = plan
+        context.insert(segment)
+        try context.save()
+
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutEditorViewModel(context: context, editing: plan)
+        viewModel.updateActivityType(.kraft)
         viewModel.addExercise(exercise)
-        viewModel.updateStrengthTargets(draftID: viewModel.drafts[0].id, sets: 3, reps: 10, weightKg: 60)
 
-        viewModel.updateActivityType(.laufen)
+        let saved = viewModel.save()
 
-        let draft = viewModel.drafts[0]
-        #expect(draft.targetSets == nil)
-        #expect(draft.targetReps == nil)
-        #expect(draft.targetWeightKg == nil)
+        #expect(saved == true)
+        #expect(plan.segments.isEmpty)
+        #expect(plan.plannedExercises.count == 1)
+        #expect(try context.fetchCount(FetchDescriptor<PlannedSegment>()) == 0)
     }
 
     @Test func saveWithoutDraftsFailsWithValidationMessage() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
 
-        let viewModel = WorkoutPlanEditorViewModel(context: context)
+        let viewModel = WorkoutEditorViewModel(context: context)
         viewModel.updateName("Leerer Plan")
 
         let saved = viewModel.save()
@@ -72,7 +111,7 @@ struct WorkoutPlanEditorViewModelTests {
         context.insert(exerciseB)
         context.insert(exerciseC)
 
-        let plan = WorkoutPlan(name: "Testplan", activityType: .kraft)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
         context.insert(plan)
         let keptExercise = PlannedExercise(orderIndex: 0, exercise: exerciseA, targetSets: 3, targetReps: 10)
         keptExercise.plan = plan
@@ -82,7 +121,7 @@ struct WorkoutPlanEditorViewModelTests {
         context.insert(removedExercise)
         try context.save()
 
-        let viewModel = WorkoutPlanEditorViewModel(context: context, editing: plan)
+        let viewModel = WorkoutEditorViewModel(context: context, editing: plan)
         // exerciseB (index 1) entfernen, exerciseC neu hinzufügen.
         viewModel.removeDraft(id: viewModel.drafts[1].id)
         viewModel.addExercise(exerciseC)
@@ -101,7 +140,7 @@ struct WorkoutPlanEditorViewModelTests {
         let exercise = Exercise(name: "Bankdrücken")
         context.insert(exercise)
 
-        let viewModel = WorkoutPlanEditorViewModel(context: context)
+        let viewModel = WorkoutEditorViewModel(context: context)
         let firstAdd = viewModel.addExercise(exercise)
         let secondAdd = viewModel.addExercise(exercise)
 

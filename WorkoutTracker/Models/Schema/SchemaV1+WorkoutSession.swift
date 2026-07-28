@@ -11,11 +11,10 @@ final class WorkoutSession {
     var endDate: Date?
     var notes: String?
 
-    // Cardio-Metrik-Block - nil bei activityType == .kraft.
-    // Dauer wird bewusst NICHT separat gespeichert (ADR 0003:
-    // startDate/endDate sind die Quelle der Wahrheit, keine
-    // akkumulierten Zahlen).
-    var distanceMeters: Double?
+    // Puls bleibt ein flaches, Session-weites Feld - nicht sinnvoll pro
+    // Segment aufteilbar in dieser manuell erfassten App (ADR 0009).
+    // Distanz kommt jetzt aus `segmentLogs` (siehe `totalDistanceMeters`
+    // in Support/WorkoutSessionFormatting.swift), kein eigenes Feld mehr.
     var averageHeartRate: Int?
 
     // HealthKit-Dedup-Vorbereitung (Schreibrichtung App->Health via
@@ -24,11 +23,31 @@ final class WorkoutSession {
     var source: SessionSource
 
     // .cascade: ein SetLog hat außerhalb seiner Session keine Bedeutung.
+    // Nur bei Kraft-Sessions befüllt (siehe ADR 0009).
     @Relationship(deleteRule: .cascade, inverse: \SetLog.session)
     var setLogs: [SetLog] = []
 
-    // .nullify: Gegenstück zu WorkoutPlan.sessions.
-    var plan: WorkoutPlan?
+    // .cascade: ein SegmentLog hat außerhalb seiner Session keine Bedeutung.
+    // Nur bei Cardio-Sessions befüllt - Kraft und Cardio nutzen bewusst
+    // getrennte Listen statt eines geteilten Metrik-Blocks (ADR 0009).
+    @Relationship(deleteRule: .cascade, inverse: \SegmentLog.session)
+    var segmentLogs: [SegmentLog] = []
+
+    // .nullify: Gegenstück zu Workout.sessions.
+    var plan: Workout?
+
+    // Snapshot des WorkoutProgram-Tages, aus dem diese Session gestartet
+    // wurde - bewusst getrennt von `plan` (dem Live-Link zum Workout dieses
+    // Tages). `programEntryID` ist der primäre Schlüssel für "letzter/
+    // nächster Tag"-Auflösung (siehe WorkoutProgram+NextEntry.swift);
+    // `programName`/`programDayLabel` sind nur Anzeige-Snapshots, die auch
+    // dann noch lesbar bleiben, wenn das Programm oder der Tag später
+    // umbenannt, umsortiert oder gelöscht wurde. Alle drei sind nil, wenn
+    // die Session nicht aus einem Programm gestartet wurde (freies Training
+    // oder direkter Workout-Start).
+    var programEntryID: UUID?
+    var programName: String?
+    var programDayLabel: String?
 
     // .cascade: ein ChallengeProgressEntry existiert nur, weil diese
     // Session ihn ausgelöst hat (ADR 0002). Wird die auslösende Session
@@ -42,7 +61,7 @@ final class WorkoutSession {
         activityType: ActivityType,
         startDate: Date = .now,
         endDate: Date? = nil,
-        plan: WorkoutPlan? = nil,
+        plan: Workout? = nil,
         source: SessionSource = .manual,
         healthKitUUID: UUID? = nil
     ) {
