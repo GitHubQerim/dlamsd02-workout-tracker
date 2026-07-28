@@ -11,7 +11,7 @@ struct WorkoutSessionViewModelTests {
 
         let exercise = Exercise(name: "Kniebeuge")
         context.insert(exercise)
-        let plan = WorkoutPlan(name: "Testplan", activityType: .kraft)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
         context.insert(plan)
         let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise, targetSets: 3, targetReps: 8, targetWeightKg: 60)
         plannedExercise.plan = plan
@@ -55,7 +55,7 @@ struct WorkoutSessionViewModelTests {
         let context = container.mainContext
 
         let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .laufen)
-        viewModel.updateCardioMetrics(distanceMeters: 5000, averageHeartRate: 140)
+        viewModel.updateAverageHeartRate(140)
 
         viewModel.finishSession()
 
@@ -81,7 +81,7 @@ struct WorkoutSessionViewModelTests {
         let exerciseB = Exercise(name: "B")
         context.insert(exerciseA)
         context.insert(exerciseB)
-        let plan = WorkoutPlan(name: "Testplan", activityType: .kraft)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
         context.insert(plan)
         let secondPlanned = PlannedExercise(orderIndex: 1, exercise: exerciseA, targetSets: 1, targetReps: 1)
         secondPlanned.plan = plan
@@ -245,7 +245,7 @@ struct WorkoutSessionViewModelTests {
         let context = container.mainContext
         let exercise = Exercise(name: "Kniebeuge")
         context.insert(exercise)
-        let plan = WorkoutPlan(name: "Testplan", activityType: .kraft)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
         context.insert(plan)
         let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise, targetSets: 3, targetReps: 8, targetWeightKg: 60)
         plannedExercise.plan = plan
@@ -338,5 +338,72 @@ struct WorkoutSessionViewModelTests {
         viewModel.finishSession()
 
         #expect(viewModel.previousAttempt(for: "Kniebeuge") == nil)
+    }
+
+    @Test func startFromPlanSeedsSegmentLogsWithTargetValues() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let plan = Workout(name: "Radtour", activityType: .radfahren)
+        context.insert(plan)
+        let segment = PlannedSegment(orderIndex: 0, label: "Warmup", targetDistanceMeters: 5000, targetDurationSeconds: 600)
+        segment.plan = plan
+        context.insert(segment)
+        try context.save()
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: plan, activityType: .radfahren)
+
+        #expect(viewModel.segmentSections.count == 1)
+        #expect(viewModel.segmentSections[0].label == "Warmup")
+        #expect(viewModel.segmentSections[0].distanceMeters == 5000)
+        #expect(viewModel.segmentSections[0].durationSeconds == 600)
+    }
+
+    @Test func startWithoutPlanCreatesNoSegmentLogs() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .radfahren)
+
+        #expect(viewModel.segmentSections.isEmpty)
+    }
+
+    @Test func addSegmentAppendsAdHocSegmentInOrder() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .radfahren)
+        viewModel.addSegment(label: "Segment 1")
+        viewModel.addSegment(label: "Segment 2")
+
+        #expect(viewModel.segmentSections.map(\.label) == ["Segment 1", "Segment 2"])
+    }
+
+    @Test func toggleSegmentCompletionTogglesState() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .radfahren)
+        viewModel.addSegment(label: "Sprint")
+        let segmentLog = viewModel.segmentSections[0]
+
+        #expect(segmentLog.isCompleted == false)
+        viewModel.toggleSegmentCompletion(segmentLog)
+        #expect(segmentLog.isCompleted == true)
+    }
+
+    @Test func totalDistanceMetersSumsSegmentLogsAndNilWhenEmpty() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .radfahren)
+        #expect(viewModel.session.totalDistanceMeters == nil)
+
+        viewModel.addSegment(label: "Warmup")
+        viewModel.addSegment(label: "Sprint")
+        viewModel.updateSegment(viewModel.segmentSections[0], distanceMeters: 2000, durationSeconds: nil)
+        viewModel.updateSegment(viewModel.segmentSections[1], distanceMeters: 3000, durationSeconds: nil)
+
+        #expect(viewModel.session.totalDistanceMeters == 5000)
     }
 }

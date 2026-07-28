@@ -6,13 +6,17 @@ enum SchemaV1: VersionedSchema {
     static var models: [any PersistentModel.Type] {
         [
             Exercise.self,
-            WorkoutPlan.self,
+            Workout.self,
             PlannedExercise.self,
             WorkoutSession.self,
             SetLog.self,
             Challenge.self,
             ChallengeEnrollment.self,
             ChallengeProgressEntry.self,
+            WorkoutProgram.self,
+            WorkoutProgramEntry.self,
+            PlannedSegment.self,
+            SegmentLog.self,
         ]
     }
 }

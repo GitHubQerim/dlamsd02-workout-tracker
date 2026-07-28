@@ -47,6 +47,24 @@ struct ModelTests {
         #expect(try context.fetchCount(FetchDescriptor<ChallengeProgressEntry>()) == 0)
     }
 
+    @Test func deletingWorkoutSessionCascadesSegmentLogs() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let session = WorkoutSession(activityType: .radfahren)
+        context.insert(session)
+        let segmentLog = SegmentLog(orderIndex: 0, label: "Sprint", distanceMeters: 5000)
+        segmentLog.session = session
+        context.insert(segmentLog)
+
+        try context.save()
+
+        context.delete(session)
+        try context.save()
+
+        #expect(try context.fetchCount(FetchDescriptor<SegmentLog>()) == 0)
+    }
+
     @Test func deletingExerciseNullifiesReferencesButKeepsNameSnapshot() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
@@ -60,7 +78,7 @@ struct ModelTests {
         setLog.session = session
         context.insert(setLog)
 
-        let plan = WorkoutPlan(name: "Testplan")
+        let plan = Workout(name: "Testplan")
         context.insert(plan)
         let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise, targetSets: 3, targetReps: 5)
         plannedExercise.plan = plan
@@ -77,11 +95,11 @@ struct ModelTests {
         #expect(plannedExercise.exerciseName == "Kniebeuge")
     }
 
-    @Test func deletingWorkoutPlanNullifiesSessionButKeepsSession() throws {
+    @Test func deletingWorkoutNullifiesSessionButKeepsSession() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
 
-        let plan = WorkoutPlan(name: "Testplan")
+        let plan = Workout(name: "Testplan")
         context.insert(plan)
 
         let session = WorkoutSession(activityType: .kraft, plan: plan)

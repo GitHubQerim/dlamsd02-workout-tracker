@@ -4,13 +4,11 @@ import SwiftData
 final class PlannedExercise {
     var orderIndex: Int
 
-    // Kraft-Ziele (nil bei Cardio-Einträgen)
+    // Rein Kraft - Cardio nutzt seit ADR 0009 ein eigenes Modell
+    // (`PlannedSegment`) statt geteilter nilable Felder hier.
     var targetSets: Int?
     var targetReps: Int?
     var targetWeightKg: Double?
-    // Cardio-Ziele (nil bei Kraft-Einträgen)
-    var targetDistanceMeters: Double?
-    var targetDurationSeconds: Double?
 
     /// Denormalisierter Namens-Snapshot zum Anlagezeitpunkt - bleibt
     /// lesbar, falls `exercise` später via .nullify auf nil gesetzt wird.
@@ -19,16 +17,14 @@ final class PlannedExercise {
     @Relationship(deleteRule: .nullify)
     var exercise: Exercise?
 
-    var plan: WorkoutPlan?
+    var plan: Workout?
 
     init(
         orderIndex: Int,
         exercise: Exercise,
         targetSets: Int? = nil,
         targetReps: Int? = nil,
-        targetWeightKg: Double? = nil,
-        targetDistanceMeters: Double? = nil,
-        targetDurationSeconds: Double? = nil
+        targetWeightKg: Double? = nil
     ) {
         self.orderIndex = orderIndex
         self.exercise = exercise
@@ -36,7 +32,5 @@ final class PlannedExercise {
         self.targetSets = targetSets
         self.targetReps = targetReps
         self.targetWeightKg = targetWeightKg
-        self.targetDistanceMeters = targetDistanceMeters
-        self.targetDurationSeconds = targetDurationSeconds
     }
 }
