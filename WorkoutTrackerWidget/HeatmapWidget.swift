@@ -28,48 +28,19 @@ struct HeatmapTimelineProvider: TimelineProvider {
     }
 }
 
-/// Festes, nicht scrollbares Fenster der letzten Wochen, die in die
-/// verfügbare Breite passen (per `GeometryReader` ermittelt, statt einer
-/// festen Spaltenzahl - sonst bleibt bei breiteren Widget-Familien
-/// ungenutzter Leerraum rechts). WidgetKit unterstützt kein Scrollen, anders
-/// als die App-eigene `ContributionHeatmapView`. Spalten-Gruppierung (7
-/// aufeinanderfolgende Tage pro Spalte, unabhängig vom Wochentag) entspricht
-/// demselben Prinzip wie dort (`LazyHGrid` mit 7 Zeilen), keine neue
-/// Layout-Logik.
+/// Festes, nicht scrollbares Fenster der letzten Wochen - `AdaptiveHeatmapGrid`
+/// berechnet Zellengröße/Spaltenzahl so, dass die verfügbare Breite exakt
+/// ausgefüllt wird, kein ungenutzter Leerraum rechts. WidgetKit unterstützt
+/// kein Scrollen, anders als die App-eigene `ContributionHeatmapView`.
 struct HeatmapWidgetView: View {
     let days: [DayCount]
-
-    private let cellSize: CGFloat = 10
-    private let cellSpacing: CGFloat = 3
-
-    private func columnsOfDays(fittingWidth width: CGFloat) -> [[DayCount]] {
-        let columnStride = cellSize + cellSpacing
-        let columnCount = max(1, Int((width + cellSpacing) / columnStride))
-        let recentDays = Array(days.suffix(columnCount * 7))
-        return stride(from: 0, to: recentDays.count, by: 7).map {
-            Array(recentDays[$0..<min($0 + 7, recentDays.count)])
-        }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Trainings-Heatmap")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            GeometryReader { geometry in
-                let columns = columnsOfDays(fittingWidth: geometry.size.width)
-                HStack(alignment: .top, spacing: cellSpacing) {
-                    ForEach(columns.indices, id: \.self) { columnIndex in
-                        VStack(spacing: cellSpacing) {
-                            ForEach(columns[columnIndex]) { day in
-                                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                    .fill(HeatmapColorMapping.color(for: day.count))
-                                    .frame(width: cellSize, height: cellSize)
-                            }
-                        }
-                    }
-                }
-            }
+            AdaptiveHeatmapGrid(days: days)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) { DSColor.surfaceBase }

@@ -19,6 +19,7 @@
 		1B26CD96147CFB25AEE922EF /* SchemaV1+Challenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDBF8ADC50402D78CBB13015 /* SchemaV1+Challenge.swift */; };
 		1FC97B8CA44D1ADAC79087AC /* HeatmapColorMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FD2B8964C815DA10F72DBB /* HeatmapColorMapping.swift */; };
 		212F585BF5CB5276C80D7D3B /* SessionSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0B2CD3EE9CD701D7B05AA4 /* SessionSource.swift */; };
+		22F26BFBD0C9E9A9DF9BA0D6 /* AdaptiveHeatmapGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F6B00CC2B09514F6739314 /* AdaptiveHeatmapGrid.swift */; };
 		23B277DCFFDEFB6DD4ADFE94 /* WorkoutSessionFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F7859DC280D2611C6D47CA2 /* WorkoutSessionFormatting.swift */; };
 		256369B8CCAFACD807EDC18A /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99438448D197E4D1601D1F8A /* SettingsViewModelTests.swift */; };
 		26F1AF50F0B4F0295B11177F /* ChallengesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9E68DFA1ECC648619E1FEF /* ChallengesViewModel.swift */; };
@@ -174,6 +175,7 @@
 		44DF0B8D665CFD0171B24381 /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
 		46F4654D9F6B044956020A2A /* HealthKitActivityMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitActivityMapping.swift; sourceTree = "<group>"; };
 		48B12D81333B0806B656CF51 /* SchemaV1+Workout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+Workout.swift"; sourceTree = "<group>"; };
+		49F6B00CC2B09514F6739314 /* AdaptiveHeatmapGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveHeatmapGrid.swift; sourceTree = "<group>"; };
 		4A3237DB65D3EE1670DA4585 /* SchemaV1+PlannedSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+PlannedSegment.swift"; sourceTree = "<group>"; };
 		4C2D48701CEFFAB8922366E8 /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
 		5102138A25A25445C1AFED84 /* SchemaV1+PlannedExercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+PlannedExercise.swift"; sourceTree = "<group>"; };
@@ -292,6 +294,7 @@
 		2909F4F35C12B31E8C8485B0 /* WorkoutTrackerWidget */ = {
 			isa = PBXGroup;
 			children = (
+				49F6B00CC2B09514F6739314 /* AdaptiveHeatmapGrid.swift */,
 				C51A024FD089A0DC5B698690 /* HeatmapWidget.swift */,
 				FB42D0E1BE1005F67CBE59C5 /* Info.plist */,
 				C7AA664EA24819DC2C5E4CC8 /* NextWorkoutWidget.swift */,
@@ -645,6 +648,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				22F26BFBD0C9E9A9DF9BA0D6 /* AdaptiveHeatmapGrid.swift in Sources */,
 				66E1ABCF21B5B6F336CC1831 /* Colors.swift in Sources */,
 				B8175D34170F4AED1F8CBAED /* DayCount.swift in Sources */,
 				D14F76CF0A2596E87EF9CE57 /* HeatmapColorMapping.swift in Sources */,
