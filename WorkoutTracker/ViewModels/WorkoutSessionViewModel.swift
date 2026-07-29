@@ -1,4 +1,6 @@
+import ActivityKit
 import Foundation
+import OSLog
 import SwiftData
 
 /// Eine Übung innerhalb der Session mit ihren Sätzen und - sofern aus einem
@@ -48,6 +50,7 @@ final class WorkoutSessionViewModel: Identifiable {
 
     private(set) var restTimerStartDate: Date?
     var restTimerDuration: TimeInterval = 90
+    private var liveActivity: Activity<WorkoutSessionActivityAttributes>?
 
     var isRestTimerRunning: Bool { restTimerStartDate != nil }
 
@@ -56,6 +59,7 @@ final class WorkoutSessionViewModel: Identifiable {
         self.session = session
         self.id = session.id
         self.healthKitService = healthKitService
+        attachOrStartLiveActivity()
     }
 
     /// Legt eine neue Session an (+ vorbefüllte Sätze bei einem Kraft-Plan)
@@ -225,7 +229,11 @@ final class WorkoutSessionViewModel: Identifiable {
         setLog.isCompleted.toggle()
         persist()
         if setLog.isCompleted {
+            // startRestTimer() aktualisiert die Live Activity bereits selbst -
+            // sonst genau einmal hier, nie beide (kein doppelter Activity.update).
             startRestTimer()
+        } else {
+            updateLiveActivity()
         }
     }
 
@@ -233,6 +241,7 @@ final class WorkoutSessionViewModel: Identifiable {
         setLog.reps = reps
         setLog.weightKg = weightKg
         persist()
+        updateLiveActivity()
     }
 
     /// Fügt einen weiteren Satz hinzu - sowohl für geplante als auch für
@@ -252,14 +261,78 @@ final class WorkoutSessionViewModel: Identifiable {
 
     func startRestTimer() {
         restTimerStartDate = .now
+        updateLiveActivity()
     }
 
     func skipRestTimer() {
         restTimerStartDate = nil
+        updateLiveActivity()
     }
 
     func adjustRestDuration(by delta: TimeInterval) {
         restTimerDuration = max(15, restTimerDuration + delta)
+        updateLiveActivity()
+    }
+
+    /// Startet eine neue Live Activity oder dockt an eine bereits laufende
+    /// derselben Session an (App-Neustart bei offener Session) - verhindert
+    /// eine zweite, doppelte Activity für dieselbe Session. Nur für Kraft-
+    /// Sessions (Übungsfortschritt/Sätze sind die einzigen im Content-State
+    /// abgebildeten Werte, siehe `WorkoutSessionActivityAttributes`).
+    private func attachOrStartLiveActivity() {
+        guard session.activityType.usesSetLogs else { return }
+        if let existing = Activity<WorkoutSessionActivityAttributes>.activities.first(where: { $0.attributes.sessionID == session.id }) {
+            liveActivity = existing
+            return
+        }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        do {
+            liveActivity = try Activity.request(
+                attributes: WorkoutSessionActivityAttributes(sessionID: session.id),
+                content: .init(state: liveActivityContentState, staleDate: nil)
+            )
+        } catch {
+            // Kein Blocker - Live Activity ist ein Zusatzfeature, die Session
+            // bleibt unabhängig davon voll nutzbar. Logger statt komplettem
+            // Schweigen, sonst nirgends nachvollziehbar (z.B. bei Erreichen
+            // des System-Limits gleichzeitiger Activities).
+            Logger(subsystem: "com.qerim.dlamsd02.workouttracker", category: "LiveActivity")
+                .error("Live Activity konnte nicht gestartet werden: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func updateLiveActivity() {
+        guard let liveActivity else { return }
+        let state = liveActivityContentState
+        Task { await liveActivity.update(.init(state: state, staleDate: nil)) }
+    }
+
+    private func endLiveActivity() {
+        guard let liveActivity else { return }
+        let state = liveActivityContentState
+        Task { await liveActivity.end(.init(state: state, staleDate: nil), dismissalPolicy: .immediate) }
+        self.liveActivity = nil
+    }
+
+    /// Nicht `private`, damit die Projektion aus ViewModel-State direkt
+    /// unit-testbar ist (Live-Activity-`Activity`-Handling selbst ist es
+    /// nicht, siehe Testkommentar in `WorkoutSessionViewModelTests`).
+    var liveActivityContentState: WorkoutSessionActivityAttributes.ContentState {
+        let sections = exerciseSections
+        let activeExerciseName = firstIncompleteExerciseName
+        let activeSection = sections.first { $0.name == activeExerciseName }
+        let activeSet = activeSection?.sets.first { !$0.isCompleted }
+
+        return WorkoutSessionActivityAttributes.ContentState(
+            workoutName: session.programName ?? session.plan?.name ?? session.activityType.displayName,
+            currentExerciseName: activeExerciseName,
+            currentSetNumber: activeSet.map { $0.setIndex + 1 },
+            currentSetReps: activeSet?.reps,
+            currentSetWeight: activeSet?.weightKg,
+            currentExerciseSetCompletionFlags: activeSection?.sets.map(\.isCompleted) ?? [],
+            restTimerStartDate: restTimerStartDate,
+            restTimerDuration: isRestTimerRunning ? restTimerDuration : nil
+        )
     }
 
     /// Sortierte Segmente der Session - Cardio-Äquivalent zu `exerciseSections`.
@@ -322,6 +395,8 @@ final class WorkoutSessionViewModel: Identifiable {
         session.detectAndPersistPersonalRecords(in: context)
         restTimerStartDate = nil
         persist()
+        WidgetSnapshotRefresher.refresh(context: context)
+        endLiveActivity()
 
         guard session.activityType.usesSetLogs, let endDate = session.endDate else { return }
         do {
@@ -346,6 +421,7 @@ final class WorkoutSessionViewModel: Identifiable {
         if let healthKitUUID = session.healthKitUUID {
             try? await healthKitService.deleteSession(healthKitUUID: healthKitUUID)
         }
+        endLiveActivity()
         context.delete(session)
         persist()
     }
