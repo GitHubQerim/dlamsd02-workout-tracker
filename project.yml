@@ -28,17 +28,50 @@ targets:
           - Manrope-Variable.ttf
         NSHealthShareUsageDescription: "Wird benötigt, um Trainingseinheiten aus Apple Health zu importieren und Doppelerfassung zu vermeiden."
         NSHealthUpdateUsageDescription: "Wird benötigt, um abgeschlossene Krafttrainings-Sessions in Apple Health zu speichern."
+        NSSupportsLiveActivities: true
     entitlements:
       path: WorkoutTracker/WorkoutTracker.entitlements
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+        com.apple.security.application-groups:
+          - group.com.qerim.dlamsd02.workouttracker
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.qerim.dlamsd02.workouttracker
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
+    dependencies:
+      - target: WorkoutTrackerWidgetExtension
+        embed: true
+  WorkoutTrackerWidgetExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: WorkoutTrackerWidget
+      - path: WorkoutTracker/LiveActivity/WorkoutSessionActivityAttributes.swift
+      - path: WorkoutTracker/DesignSystem/Colors.swift
+      - path: WorkoutTracker/Support/HeatmapColorMapping.swift
+      - path: WorkoutTracker/Support/WidgetSnapshotStore.swift
+      - path: WorkoutTracker/Support/DayCount.swift
+    resources:
+      - path: WorkoutTracker/Assets.xcassets
+    info:
+      path: WorkoutTrackerWidget/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: WorkoutTrackerWidget/WorkoutTrackerWidgetExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.qerim.dlamsd02.workouttracker
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.qerim.dlamsd02.workouttracker.WidgetExtension
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
   WorkoutTrackerTests:
     type: bundle.unit-test
     platform: iOS

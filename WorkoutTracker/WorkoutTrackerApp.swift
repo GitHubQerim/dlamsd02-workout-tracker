@@ -22,6 +22,7 @@ struct WorkoutTrackerApp: App {
                 .task {
                     await ExerciseSeeder.seedIfNeeded(in: modelContainer.mainContext)
                     await ChallengeSeeder.seedIfNeeded(in: modelContainer.mainContext)
+                    WidgetSnapshotRefresher.refresh(context: modelContainer.mainContext)
                 }
         }
         .modelContainer(modelContainer)
