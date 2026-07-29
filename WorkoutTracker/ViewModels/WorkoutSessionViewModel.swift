@@ -44,26 +44,33 @@ final class WorkoutSessionViewModel: Identifiable {
     let id: UUID
     let session: WorkoutSession
     private let context: ModelContext
+    private let healthKitService: HealthKitServicing
 
     private(set) var restTimerStartDate: Date?
     var restTimerDuration: TimeInterval = 90
 
     var isRestTimerRunning: Bool { restTimerStartDate != nil }
 
-    init(context: ModelContext, session: WorkoutSession) {
+    init(context: ModelContext, session: WorkoutSession, healthKitService: HealthKitServicing = HealthKitService()) {
         self.context = context
         self.session = session
         self.id = session.id
+        self.healthKitService = healthKitService
     }
 
     /// Legt eine neue Session an (+ vorbefüllte Sätze bei einem Kraft-Plan)
     /// und persistiert sie sofort, damit sie auch bei App-Beendigung während
     /// der laufenden Session nicht verloren geht (siehe Re-Entrancy-Schutz
     /// in WorkoutsView/DashboardView).
-    static func start(context: ModelContext, plan: Workout?, activityType: ActivityType) -> WorkoutSessionViewModel {
+    static func start(
+        context: ModelContext,
+        plan: Workout?,
+        activityType: ActivityType,
+        healthKitService: HealthKitServicing = HealthKitService()
+    ) -> WorkoutSessionViewModel {
         let session = makeSession(context: context, plan: plan, activityType: activityType)
         try? context.save()
-        return WorkoutSessionViewModel(context: context, session: session)
+        return WorkoutSessionViewModel(context: context, session: session, healthKitService: healthKitService)
     }
 
     /// Startet eine Session aus einem `WorkoutProgram`-Tag heraus und
@@ -71,14 +78,19 @@ final class WorkoutSessionViewModel: Identifiable {
     /// an `WorkoutSession.programEntryID`). `nil`, wenn der Tag keinen
     /// lebenden Workout-Link mehr hat (Workout wurde gelöscht) - die UI
     /// blendet den Start-Button in diesem Fall ohnehin aus.
-    static func start(context: ModelContext, programEntry: WorkoutProgramEntry, programName: String) -> WorkoutSessionViewModel? {
+    static func start(
+        context: ModelContext,
+        programEntry: WorkoutProgramEntry,
+        programName: String,
+        healthKitService: HealthKitServicing = HealthKitService()
+    ) -> WorkoutSessionViewModel? {
         guard let workout = programEntry.workout else { return nil }
         let session = makeSession(context: context, plan: workout, activityType: workout.activityType)
         session.programEntryID = programEntry.id
         session.programName = programName
         session.programDayLabel = programEntry.dayLabel
         try? context.save()
-        return WorkoutSessionViewModel(context: context, session: session)
+        return WorkoutSessionViewModel(context: context, session: session, healthKitService: healthKitService)
     }
 
     /// Baut Session + vorbefüllte Sätze/Segmente, speichert aber NICHT selbst
@@ -287,7 +299,12 @@ final class WorkoutSessionViewModel: Identifiable {
         persist()
     }
 
-    func finishSession() {
+    /// Schreibt nur Kraft-Sessions nach Apple Health (Cardio kommt
+    /// ausschließlich per Import umgekehrt herein, siehe ADR 0012) - der
+    /// lokale `persist()` passiert zuerst und unabhängig vom HK-Ergebnis,
+    /// ein fehlschlagender HK-Save darf die lokal beendete Session nie
+    /// blockieren oder ungültig machen.
+    func finishSession() async {
         assert(
             !(session.activityType.usesSetLogs && !session.segmentLogs.isEmpty),
             "Kraft-Sessions dürfen keine SegmentLogs tragen"
@@ -305,9 +322,30 @@ final class WorkoutSessionViewModel: Identifiable {
         session.detectAndPersistPersonalRecords(in: context)
         restTimerStartDate = nil
         persist()
+
+        guard session.activityType.usesSetLogs, let endDate = session.endDate else { return }
+        do {
+            let healthKitUUID = try await healthKitService.saveStrengthSession(
+                HealthKitOutgoingSession(
+                    activityType: session.activityType,
+                    start: session.startDate,
+                    end: endDate
+                )
+            )
+            session.healthKitUUID = healthKitUUID
+            persist()
+        } catch {
+            // Kein Re-Throw: die Session bleibt lokal gültig und gespeichert,
+            // ein fehlgeschlagener HealthKit-Save ist kein Blocker.
+        }
     }
 
-    func discardSession() {
+    /// Best-effort Löschung eines bereits geschriebenen HK-Samples - Fehler
+    /// werden bewusst ignoriert, die lokale Löschung darf nie daran hängen.
+    func discardSession() async {
+        if let healthKitUUID = session.healthKitUUID {
+            try? await healthKitService.deleteSession(healthKitUUID: healthKitUUID)
+        }
         context.delete(session)
         persist()
     }

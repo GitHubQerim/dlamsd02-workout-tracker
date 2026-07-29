@@ -102,12 +102,16 @@ struct WorkoutSessionView: View {
             }
             .confirmationDialog("Training beenden?", isPresented: $isPresentingFinishDialog, titleVisibility: .visible) {
                 Button("Speichern & beenden") {
-                    viewModel.finishSession()
-                    dismiss()
+                    Task {
+                        await viewModel.finishSession()
+                        dismiss()
+                    }
                 }
                 Button("Verwerfen", role: .destructive) {
-                    viewModel.discardSession()
-                    dismiss()
+                    Task {
+                        await viewModel.discardSession()
+                        dismiss()
+                    }
                 }
                 Button("Weiter trainieren", role: .cancel) {}
             }
