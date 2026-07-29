@@ -65,5 +65,6 @@ final class HealthKitImportViewModel {
 
         try? context.save()
         importableWorkouts.removeAll { $0.id == sample.id }
+        WidgetSnapshotRefresher.refresh(context: context)
     }
 }

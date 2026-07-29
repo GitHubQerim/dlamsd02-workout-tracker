@@ -7,13 +7,6 @@ struct ExerciseVolume: Identifiable {
     var id: String { exerciseName }
 }
 
-/// Ein Tages-Aggregat (Session-Anzahl) für Heatmap/Wochenrückblick.
-struct DayCount: Identifiable {
-    let date: Date
-    let count: Int
-    var id: Date { date }
-}
-
 /// Reine, zustandslose Auswertungsfunktionen für die Challenges-/Auswertungen-
 /// Ansicht - operieren auf bereits per `@Query` geladenen Arrays, kein
 /// `ModelContext` nötig, trivial ohne `ModelContainer` testbar. `calendar`/
