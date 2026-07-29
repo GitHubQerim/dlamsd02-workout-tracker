@@ -18,6 +18,10 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Wird benötigt, um Trainingseinheiten aus Apple Health zu importieren und Doppelerfassung zu vermeiden.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Wird benötigt, um abgeschlossene Krafttrainings-Sessions in Apple Health zu speichern.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Manrope-Variable.ttf</string>

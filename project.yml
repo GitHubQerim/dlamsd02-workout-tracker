@@ -7,7 +7,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: 6.0
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: "XK6F49MN8K"
     CODE_SIGN_STYLE: Automatic
 targets:
   WorkoutTracker:
@@ -26,6 +26,13 @@ targets:
           - UIInterfaceOrientationPortrait
         UIAppFonts:
           - Manrope-Variable.ttf
+        NSHealthShareUsageDescription: "Wird benötigt, um Trainingseinheiten aus Apple Health zu importieren und Doppelerfassung zu vermeiden."
+        NSHealthUpdateUsageDescription: "Wird benötigt, um abgeschlossene Krafttrainings-Sessions in Apple Health zu speichern."
+    entitlements:
+      path: WorkoutTracker/WorkoutTracker.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.qerim.dlamsd02.workouttracker
