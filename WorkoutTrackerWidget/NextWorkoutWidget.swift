@@ -60,50 +60,19 @@ struct NextWorkoutWidgetView: View {
             }
 
             // Mini-Heatmap nur bei .systemMedium - in .systemSmall ist neben
-            // dem Text schlicht kein Platz dafür (Nutzer-Vorgabe: nutzt den
-            // sonst leeren Bereich rechts statt eines zweiten, separaten
-            // Heatmap-Widgets zu brauchen).
+            // dem Text schlicht kein Platz dafür. Füllt über
+            // `AdaptiveHeatmapGrid` den kompletten verbleibenden Platz
+            // (Breite UND Höhe) statt einer fest dimensionierten, zu kleinen
+            // Ecke (Nutzer-Feedback nach echtem Gerätetest).
             if family == .systemMedium, !entry.heatmapDays.isEmpty {
-                Spacer(minLength: 8)
-                MiniHeatmap(days: entry.heatmapDays)
+                AdaptiveHeatmapGrid(days: entry.heatmapDays, cellSpacing: 2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Spacer()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) { DSColor.surfaceBase }
-    }
-}
-
-/// Kompakte Heatmap-Vorschau (kleinere Zellen, weniger Wochen als das
-/// eigenständige `HeatmapWidget`) - reine Platzausnutzung, kein Ersatz für
-/// die große Heatmap-Ansicht.
-private struct MiniHeatmap: View {
-    let days: [DayCount]
-
-    private let cellSize: CGFloat = 6
-    private let cellSpacing: CGFloat = 2
-    private let columnCount = 6
-
-    private var columns: [[DayCount]] {
-        let recentDays = Array(days.suffix(columnCount * 7))
-        return stride(from: 0, to: recentDays.count, by: 7).map {
-            Array(recentDays[$0..<min($0 + 7, recentDays.count)])
-        }
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: cellSpacing) {
-            ForEach(columns.indices, id: \.self) { columnIndex in
-                VStack(spacing: cellSpacing) {
-                    ForEach(columns[columnIndex]) { day in
-                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                            .fill(HeatmapColorMapping.color(for: day.count))
-                            .frame(width: cellSize, height: cellSize)
-                    }
-                }
-            }
-        }
     }
 }
 
