@@ -2,15 +2,29 @@ import SwiftUI
 import SwiftData
 
 /// Start-Screen: zeigt den aktuellen Trainingsstatus (Aufgabenstellung 3's
-/// mandatory Start-Screen-Anforderung, hier auf Workout-Ebene - die
-/// Challenge-spezifische Statusanzeige kommt mit Phase D dazu).
+/// mandatory Start-Screen-Anforderung, hier auf Workout-Ebene UND - seit
+/// Phase D - mit dem Fortschritt der ersten beigetretenen Challenge).
 struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WorkoutSession.startDate, order: .reverse) private var sessions: [WorkoutSession]
     @Query(filter: #Predicate<WorkoutSession> { $0.endDate == nil }) private var openSessions: [WorkoutSession]
     @Query(filter: #Predicate<WorkoutProgram> { $0.isDefault == true }) private var defaultPrograms: [WorkoutProgram]
+    @Query(sort: \Challenge.name) private var challenges: [Challenge]
 
     @State private var resumedSessionViewModel: WorkoutSessionViewModel?
+
+    private var firstEnrolledChallenge: Challenge? {
+        challenges.first { !$0.enrollments.isEmpty }
+    }
+
+    private func challengeProgress(_ challenge: Challenge) -> Int {
+        switch challenge.challengeType {
+        case .streakTage:
+            ChallengeInsights.currentStreakDays(entries: challenge.progressEntries)
+        case .frequenzProWoche:
+            ChallengeInsights.weeklyProgress(entries: challenge.progressEntries)
+        }
+    }
 
     private var completedSessions: [WorkoutSession] {
         sessions.filter { $0.endDate != nil }
@@ -60,6 +74,22 @@ struct DashboardView: View {
                         DSStatTile(label: "Letztes Training", icon: "flame", value: lastTrainingDisplayText(for: lastSession))
                     } else {
                         DSStatTile(label: "Letztes Training", icon: "flame", value: "-")
+                    }
+                }
+
+                if let challenge = firstEnrolledChallenge {
+                    DSCard {
+                        HStack {
+                            VStack(alignment: .leading, spacing: DSSpacing.s4) {
+                                Text(challenge.name)
+                                    .font(DSFont.label)
+                                    .foregroundStyle(DSColor.textSecondary)
+                                Text("\(challengeProgress(challenge)) / \(challenge.targetValue)")
+                                    .font(DSFont.body)
+                                    .foregroundStyle(DSColor.textPrimary)
+                            }
+                            Spacer()
+                        }
                     }
                 }
 
