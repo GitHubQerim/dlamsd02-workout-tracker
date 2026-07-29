@@ -1,22 +1,82 @@
 import SwiftUI
+import SwiftData
 
-/// Placeholder for the app-init phase. Will later host the challenge
-/// catalog, enrollment and per-challenge progress log (Phase D).
+/// Challenges (fester Katalog, Beitritt, Streak-/Frequenz-Fortschritt) +
+/// Auswertungen (Wochenrückblick, Heatmap, Top-5-Volumen, letzte Rekorde) -
+/// Phase D.
 struct ChallengesView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Challenge.name) private var challenges: [Challenge]
+    @Query(sort: \WorkoutSession.startDate, order: .reverse) private var sessions: [WorkoutSession]
+    @Query(sort: \PersonalRecord.achievedAt, order: .reverse) private var personalRecords: [PersonalRecord]
+
+    @State private var viewModel: ChallengesViewModel?
+
+    private var completedSessions: [WorkoutSession] {
+        sessions.filter { $0.endDate != nil }
+    }
+
+    private var enrolledChallenges: [Challenge] {
+        challenges.filter { !$0.enrollments.isEmpty }
+    }
+
+    private var catalogChallenges: [Challenge] {
+        challenges.filter { $0.enrollments.isEmpty }
+    }
+
     var body: some View {
         DSWashedScreen {
-            VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
-                Text("Challenges")
-                    .font(DSFont.screenTitle)
-                    .foregroundStyle(DSColor.textPrimary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: DSSpacing.sectionGap) {
+                    Text("Challenges")
+                        .font(DSFont.screenTitle)
+                        .foregroundStyle(DSColor.textPrimary)
 
-                Text("Coming soon")
-                    .font(DSFont.body)
-                    .foregroundStyle(DSColor.textSecondary)
+                    if !enrolledChallenges.isEmpty {
+                        Text("Deine Challenges")
+                            .font(DSFont.label)
+                            .foregroundStyle(DSColor.textSecondary)
+                        VStack(spacing: DSSpacing.cardGap) {
+                            ForEach(enrolledChallenges) { challenge in
+                                if let enrollment = challenge.enrollments.first {
+                                    ChallengeEnrollmentCard(challenge: challenge) {
+                                        viewModel?.leave(enrollment)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if !catalogChallenges.isEmpty {
+                        Text("Weitere Challenges")
+                            .font(DSFont.label)
+                            .foregroundStyle(DSColor.textSecondary)
+                        VStack(spacing: DSSpacing.cardGap) {
+                            ForEach(catalogChallenges) { challenge in
+                                ChallengeCatalogRow(challenge: challenge) {
+                                    viewModel?.join(challenge)
+                                }
+                            }
+                        }
+                    }
+
+                    Text("Auswertungen")
+                        .font(DSFont.label)
+                        .foregroundStyle(DSColor.textSecondary)
+
+                    WeeklyReviewChart(bars: ChallengeInsights.weeklyReviewBars(from: completedSessions))
+                    ContributionHeatmapView(days: ChallengeInsights.heatmapDays(from: completedSessions))
+                    TopVolumeList(exercises: ChallengeInsights.topVolumeExercises(from: completedSessions))
+                    RecentPersonalRecordsList(records: Array(personalRecords.prefix(5)))
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle("Challenges")
+        .onAppear {
+            if viewModel == nil {
+                viewModel = ChallengesViewModel(context: modelContext)
+            }
+        }
     }
 }
 
