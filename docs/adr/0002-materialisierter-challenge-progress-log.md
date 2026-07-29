@@ -21,3 +21,15 @@ Wir materialisieren den Fortschritt. Das ist die vom `architecture-reviewer` ben
 - Nutzer-Löschung? Lokale Daten, Löschen der App genügt.
 - Migration weg? `ChallengeProgressEntry` ist ein einfaches, eigenständiges SwiftData-Model – leicht exportierbar/ersetzbar.
 - Löst die einfachste Option (rein berechnet) das Problem auch? Technisch ja, aber nicht die Bewertungsanforderung – deshalb bewusst die zweiteinfachste, nicht die einfachste Option gewählt.
+
+## Nachtrag 2026-07-28 (Phase D): Zähl-Regeln, Enrollment-Gating, Konsistenz mit `previousAttempt()`
+
+Beim Verdrahten der eigentlichen Materialisierung (`WorkoutSession.materializeChallengeProgress(in:)`, aufgerufen aus `finishSession()`) wurden drei bisher offene Detailfragen entschieden:
+
+**Streak- vs. Frequenz-Zählregel:** `streakTage`-Challenges bekommen höchstens einen `ChallengeProgressEntry` pro Kalendertag (Streak zählt Tage, nicht Sessions - zwei Sessions am selben Tag dürfen die Streak nicht doppelt voranbringen). `frequenzProWoche`-Challenges bekommen dagegen einen Eintrag pro abgeschlossener Session ohne Dedup (Frequenz zählt tatsächliche Trainingseinheiten pro Woche). Jede Sportart (Kraft und Cardio) zählt gleichermaßen für beide Typen.
+
+**Enrollment-Gating ohne rückwirkendes Nachtragen/Reset:** `ChallengeEnrollment` hat bewusst keine Beziehung zu `ChallengeProgressEntry` (dieser referenziert nur `Challenge` + `triggeringSession`). Eine Challenge bekommt also nur dann einen neuen Eintrag, wenn im Moment des Session-Abschlusses mindestens eine Anmeldung existiert - kein rückwirkendes Nachtragen für Sessions vor dem Beitritt, kein Reset des bisherigen Logs bei Verlassen und späterem erneutem Beitritt. Das ist die einfachste korrekte Lesart des bestehenden Schemas (kein rückwirkendes Neuberechnen, im Sinne der ursprünglichen Entscheidung oben) und wurde bewusst nicht um eine Enrollment→ProgressEntry-Beziehung erweitert, um diese Garantie zu erzwingen - YAGNI, solange kein Bedarf für ein "sauberes" Zurücksetzen erkennbar ist.
+
+**"Alle SetLogs zählen, nicht nur abgehakte" als projektweite Konsistenzregel:** `WorkoutSessionViewModel.previousAttempt()` filtert bereits seit Phase C bewusst nicht nach `SetLog.isCompleted` - alle geloggten Sätze zählen für den "Letztes Mal"-Vergleich. Personal-Record-Erkennung (ADR 0010) und Top-5-Volumen-Auswertung übernehmen dieselbe Regel, statt für "was zählt als geloggter Satz" zwei unterschiedliche, unbegründete Antworten im selben Projekt zu haben.
+
+**Bekannte, bewusst nicht gelöste Einschränkung:** Tagesgrenzen werden über `Calendar.current`/Gerätezeitzone bestimmt - bei einem Zeitzonenwechsel während einer laufenden Streak könnte ein Tag doppelt oder gar nicht gezählt werden. Für ein Einzelnutzer-Kursprojekt ohne Reisenutzung akzeptiert, keine eigene Lösung dafür.

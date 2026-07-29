@@ -17,6 +17,7 @@ enum SchemaV1: VersionedSchema {
             WorkoutProgramEntry.self,
             PlannedSegment.self,
             SegmentLog.self,
+            PersonalRecord.self,
         ]
     }
 }
