@@ -50,25 +50,25 @@ struct WorkoutSessionViewModelTests {
         #expect(setLog.isCompleted == true)
     }
 
-    @Test func finishSessionSetsEndDateAndPersists() throws {
+    @Test func finishSessionSetsEndDateAndPersists() async throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
 
         let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .laufen)
         viewModel.updateAverageHeartRate(140)
 
-        viewModel.finishSession()
+        await viewModel.finishSession()
 
         #expect(viewModel.session.endDate != nil)
         #expect(try context.fetchCount(FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endDate == nil })) == 0)
     }
 
-    @Test func discardSessionDeletesSession() throws {
+    @Test func discardSessionDeletesSession() async throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
 
         let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .laufen)
-        viewModel.discardSession()
+        await viewModel.discardSession()
 
         #expect(try context.fetchCount(FetchDescriptor<WorkoutSession>()) == 0)
     }
@@ -285,44 +285,44 @@ struct WorkoutSessionViewModelTests {
         #expect(currentViewModel.previousAttempt(for: "Kniebeuge") == nil)
     }
 
-    @Test func previousAttemptIgnoresNonMatchingExercise() throws {
+    @Test func previousAttemptIgnoresNonMatchingExercise() async throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
         let exerciseA = Exercise(name: "A")
         context.insert(exerciseA)
 
-        let pastViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        let pastViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: MockHealthKitService())
         pastViewModel.addSet(for: exerciseA, suggestedReps: 8, suggestedWeightKg: 60)
-        pastViewModel.finishSession()
+        await pastViewModel.finishSession()
 
-        let currentViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        let currentViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: MockHealthKitService())
 
         #expect(currentViewModel.previousAttempt(for: "B") == nil)
     }
 
-    @Test func previousAttemptFindsMostRecentMatchingCompletedSession() throws {
+    @Test func previousAttemptFindsMostRecentMatchingCompletedSession() async throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
         let exercise = Exercise(name: "Kniebeuge")
         context.insert(exercise)
 
-        let olderViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        let olderViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: MockHealthKitService())
         olderViewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 50)
         olderViewModel.session.startDate = Date(timeIntervalSinceNow: -7200)
-        olderViewModel.finishSession()
+        await olderViewModel.finishSession()
 
-        let newerViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        let newerViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: MockHealthKitService())
         newerViewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 60)
         newerViewModel.session.startDate = Date(timeIntervalSinceNow: -3600)
-        newerViewModel.finishSession()
+        await newerViewModel.finishSession()
 
-        let currentViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        let currentViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: MockHealthKitService())
 
         let attempt = currentViewModel.previousAttempt(for: "Kniebeuge")
         #expect(attempt?.sets.first?.weightKg == 60)
     }
 
-    @Test func previousAttemptExcludesCurrentSessionEvenIfMatching() throws {
+    @Test func previousAttemptExcludesCurrentSessionEvenIfMatching() async throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
         let exercise = Exercise(name: "Kniebeuge")
@@ -332,10 +332,10 @@ struct WorkoutSessionViewModelTests {
         // Fetch-Filter (endDate != nil, passende exerciseName) passen - muss
         // trotzdem über den id-Ausschluss ignoriert werden, sonst würde
         // previousAttempt sich mit sich selbst vergleichen.
-        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: MockHealthKitService())
         viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 60)
         viewModel.toggleSetCompletion(viewModel.session.setLogs[0])
-        viewModel.finishSession()
+        await viewModel.finishSession()
 
         #expect(viewModel.previousAttempt(for: "Kniebeuge") == nil)
     }

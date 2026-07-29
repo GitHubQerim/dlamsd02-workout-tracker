@@ -133,6 +133,16 @@ struct DashboardView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle("Dashboard")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    SettingsView()
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .accessibilityLabel("Einstellungen")
+            }
+        }
         .fullScreenCover(item: $resumedSessionViewModel) { sessionViewModel in
             WorkoutSessionView(viewModel: sessionViewModel)
         }
