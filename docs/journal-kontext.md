@@ -36,6 +36,8 @@ Siehe `docs/adr/` für die vollständige Begründung je Entscheidung:
 - 0004 – MVVM statt TCA (Bestätigung trotz größerem Scope)
 - 0005 – iOS 26 als Deployment-Target + Abgrenzung Liquid Glass vs. eigenes Design-System
 - 0006 – Multi-Sport-Datenmodell: ein `WorkoutSession`-Typ statt paralleler Entity-Hierarchien
+- 0011 – HealthKitService-Architektur: erster echter Service statt zustandsloser Support-Extensions
+- 0012 – HealthKit-Dedup-/Sync-Strategie (ausschließlich über `HKWorkout.uuid`)
 
 Ein `architecture-reviewer`-Agent hat die Grundsatzentscheidungen vor der Umsetzung geprüft (u.a. den materialisierten Challenge-Log und das Wall-Clock-Timer-Design als Korrekturen beigetragen).
 
