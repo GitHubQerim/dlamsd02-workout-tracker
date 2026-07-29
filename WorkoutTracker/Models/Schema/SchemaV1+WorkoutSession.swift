@@ -56,6 +56,12 @@ final class WorkoutSession {
     @Relationship(deleteRule: .cascade, inverse: \ChallengeProgressEntry.triggeringSession)
     var challengeProgressEntries: [ChallengeProgressEntry] = []
 
+    // .cascade: ein PersonalRecord ohne seine auslösende Session wäre ein
+    // Phantom-Rekord - gleiches Argument wie bei challengeProgressEntries
+    // (ADR 0002/0010).
+    @Relationship(deleteRule: .cascade, inverse: \PersonalRecord.session)
+    var personalRecords: [PersonalRecord] = []
+
     init(
         id: UUID = UUID(),
         activityType: ActivityType,

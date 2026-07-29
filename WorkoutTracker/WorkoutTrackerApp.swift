@@ -19,7 +19,10 @@ struct WorkoutTrackerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .task { await ExerciseSeeder.seedIfNeeded(in: modelContainer.mainContext) }
+                .task {
+                    await ExerciseSeeder.seedIfNeeded(in: modelContainer.mainContext)
+                    await ChallengeSeeder.seedIfNeeded(in: modelContainer.mainContext)
+                }
         }
         .modelContainer(modelContainer)
     }

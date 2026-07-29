@@ -301,9 +301,10 @@ final class WorkoutSessionViewModel: Identifiable {
             "Cardio-Sessions dürfen keine SetLogs tragen"
         )
         session.endDate = .now
+        session.materializeChallengeProgress(in: context)
+        session.detectAndPersistPersonalRecords(in: context)
         restTimerStartDate = nil
         persist()
-        // Anknüpfpunkt Phase D: ChallengeProgressEntry-Erzeugung (ADR 0002) kommt hier rein.
     }
 
     func discardSession() {
