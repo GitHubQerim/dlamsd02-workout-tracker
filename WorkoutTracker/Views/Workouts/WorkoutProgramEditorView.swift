@@ -8,6 +8,7 @@ struct WorkoutProgramEditorView: View {
 
     @State private var viewModel: WorkoutProgramEditorViewModel
     @State private var isPresentingWorkoutPicker = false
+    @State private var pendingEntryDeletion: UUID?
 
     init(context: ModelContext, editing program: WorkoutProgram? = nil) {
         _viewModel = State(initialValue: WorkoutProgramEditorViewModel(context: context, editing: program))
@@ -42,7 +43,7 @@ struct WorkoutProgramEditorView: View {
                             entryRow(draft)
                         }
                         .onDelete { offsets in
-                            offsets.forEach { viewModel.removeDraft(id: viewModel.drafts[$0].id) }
+                            pendingEntryDeletion = offsets.first.map { viewModel.drafts[$0].id }
                         }
                         .onMove { source, destination in
                             viewModel.moveDrafts(from: source, to: destination)
@@ -65,8 +66,12 @@ struct WorkoutProgramEditorView: View {
             }
             .navigationTitle(viewModel.isEditingExistingProgram ? "Plan bearbeiten" : "Neuer Plan")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    // Siehe Kommentar in WorkoutEditorView.swift - erhält die
+                    // Escape-Taste-Bindung auf iPad/Mac Catalyst.
                     Button("Abbrechen") { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                    EditButton()
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Speichern") {
@@ -79,6 +84,9 @@ struct WorkoutProgramEditorView: View {
                 WorkoutPickerView { workout in
                     viewModel.addEntry(workout: workout)
                 }
+            }
+            .confirmRemoval(title: "Tag entfernen?", pendingID: $pendingEntryDeletion) { id in
+                viewModel.removeDraft(id: id)
             }
         }
     }

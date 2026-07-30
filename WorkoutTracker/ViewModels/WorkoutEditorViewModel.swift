@@ -27,6 +27,13 @@ final class WorkoutEditorViewModel {
         var existing: PlannedSegment?
     }
 
+    /// Einzige Quelle für die Kraft-Zielwert-Defaults - von `addExercise()`
+    /// (neue Übung) UND `init()` (bestehender Plan mit `nil`-Werten) genutzt,
+    /// damit beide Pfade dieselben Zahlen zeigen UND tatsächlich persistieren
+    /// (siehe Kommentar an `addExercise` unten für die Vorgeschichte).
+    static let defaultTargetSets = 3
+    static let defaultTargetReps = 10
+
     private(set) var name: String = ""
     private(set) var activityType: ActivityType = .kraft
     private(set) var drafts: [PlannedExerciseDraft] = []
@@ -54,11 +61,16 @@ final class WorkoutEditorViewModel {
                 // Übung wurde inzwischen aus dem Katalog gelöscht (nullify) -
                 // kann in dieser Editier-Sitzung nicht mehr sinnvoll dargestellt werden.
                 guard let exercise = plannedExercise.exercise else { return nil }
+                // Backfill wie in `addExercise()`: ein `nil`-Wert (z.B. aus
+                // einem Plan, der vor diesem Fix gespeichert wurde) bleibt
+                // sonst bis zum manuellen Antippen des Steppers/Wheel-Pickers
+                // `nil` und persistiert beim Speichern erneut `nil` - sichtbar
+                // als "0×0" auf `WorkoutDetailView`.
                 return PlannedExerciseDraft(
                     id: UUID(),
                     exercise: exercise,
-                    targetSets: plannedExercise.targetSets,
-                    targetReps: plannedExercise.targetReps,
+                    targetSets: plannedExercise.targetSets ?? Self.defaultTargetSets,
+                    targetReps: plannedExercise.targetReps ?? Self.defaultTargetReps,
                     targetWeightKg: plannedExercise.targetWeightKg,
                     existing: plannedExercise
                 )
@@ -98,12 +110,13 @@ final class WorkoutEditorViewModel {
             validationMessage = "\(exercise.name) ist bereits Teil dieses Workouts."
             return false
         }
-        // Defaults identisch zur Anzeige in WorkoutEditorView (draft.targetSets ?? 3 /
-        // draft.targetReps ?? 10) - direkt im Draft setzen statt nur kosmetisch in der
-        // UI anzuzeigen, sonst persistiert save() ohne Nutzerinteraktion `nil` und
-        // WorkoutSessionViewModel.makeSession() fällt beim Sessionstart auf 1×0 zurück.
+        // Defaults direkt im Draft setzen statt nur kosmetisch in der UI
+        // anzuzeigen, sonst persistiert save() ohne Nutzerinteraktion `nil`
+        // und WorkoutSessionViewModel.makeSession() fällt beim Sessionstart
+        // auf 1×0 zurück. Dieselben Konstanten wie beim Laden bestehender
+        // Pläne in `init()`.
         drafts.append(
-            PlannedExerciseDraft(id: UUID(), exercise: exercise, targetSets: 3, targetReps: 10, existing: nil)
+            PlannedExerciseDraft(id: UUID(), exercise: exercise, targetSets: Self.defaultTargetSets, targetReps: Self.defaultTargetReps, existing: nil)
         )
         return true
     }
