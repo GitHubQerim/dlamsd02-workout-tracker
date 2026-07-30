@@ -58,6 +58,13 @@ enum DSColor {
     static let borderSubtle = Color.white.opacity(0.06)
     static let borderStrong = Color.white.opacity(0.12)
 
+    /// Ruhezustand-Füllung für inline editierbare Eingabefelder (z.B.
+    /// Reps/Gewicht in SetRow). Bewusst ein eigener Token statt Wiederver-
+    /// wendung von `borderSubtle`, obwohl der Wert identisch ist - Fill und
+    /// Border sind semantisch unterschiedliche Rollen und sollen unabhängig
+    /// voneinander änderbar bleiben.
+    static let fieldFill = Color.white.opacity(0.06)
+
     /// Top-anchored teal wash behind screen headers — the system's only gradient.
     /// Two stops (not several intermediate greens) so the fade to black reads
     /// as one smooth, even transition instead of visible banding.

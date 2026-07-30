@@ -20,6 +20,10 @@ struct CollapsedExerciseRow: View {
                     DSIcon(name: "check", size: 16)
                         .foregroundStyle(DSColor.accent)
                 }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DSColor.textTertiary)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, DSSpacing.s16)
             .frame(minHeight: DSSpacing.tapMin)

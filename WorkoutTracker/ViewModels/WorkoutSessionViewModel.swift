@@ -140,6 +140,15 @@ final class WorkoutSessionViewModel: Identifiable {
         return session
     }
 
+    /// Programmtag-Snapshot zuerst (überlebt Löschung des Plans/Programms),
+    /// dann direkter Plan-Name, dann activityType als letzter Fallback für
+    /// freies Training ohne Plan. Einzige Stelle dieser Fallback-Kette -
+    /// wird auch von liveActivityContentState genutzt, damit Header und Live
+    /// Activity nie auseinanderlaufen.
+    var displayTitle: String {
+        session.programName ?? session.plan?.name ?? session.activityType.displayName
+    }
+
     /// Übungen in Plan-Reihenfolge (bzw. Erst-Auftrittsreihenfolge bei
     /// freiem Training ohne Plan), jeweils mit ihren Sätzen und - sofern aus
     /// einem Plan gestartet - dem zugehörigen Zielwert.
@@ -182,6 +191,17 @@ final class WorkoutSessionViewModel: Identifiable {
     func isExerciseComplete(_ name: String) -> Bool {
         guard let section = exerciseSections.first(where: { $0.name == name }) else { return false }
         return !section.sets.isEmpty && section.sets.allSatisfy(\.isCompleted)
+    }
+
+    /// Ob wirklich alle Sätze (Kraft) bzw. Segmente (Cardio) der Session
+    /// abgehakt sind - Grundlage für den "Workout abschließen"-Zustand der
+    /// permanenten Bottom-Pille (`WorkoutSessionView.finishBar`).
+    var isWorkoutComplete: Bool {
+        if session.activityType.usesSetLogs {
+            !session.setLogs.isEmpty && session.setLogs.allSatisfy(\.isCompleted)
+        } else {
+            !session.segmentLogs.isEmpty && session.segmentLogs.allSatisfy(\.isCompleted)
+        }
     }
 
     /// Nächster offener Satz einer Übung (erster mit `isCompleted == false`,
@@ -324,7 +344,7 @@ final class WorkoutSessionViewModel: Identifiable {
         let activeSet = activeSection?.sets.first { !$0.isCompleted }
 
         return WorkoutSessionActivityAttributes.ContentState(
-            workoutName: session.programName ?? session.plan?.name ?? session.activityType.displayName,
+            workoutName: displayTitle,
             currentExerciseName: activeExerciseName,
             currentSetNumber: activeSet.map { $0.setIndex + 1 },
             currentSetReps: activeSet?.reps,

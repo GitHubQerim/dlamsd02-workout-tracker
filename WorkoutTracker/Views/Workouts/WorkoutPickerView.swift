@@ -8,18 +8,25 @@ import SwiftData
 /// nicht in diesem Feature enthaltenes Ticket.
 struct WorkoutPickerView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Workout.createdAt, order: .reverse) private var workouts: [Workout]
 
     let onSelect: (Workout) -> Void
+    @State private var isPresentingNewWorkout = false
 
     var body: some View {
         NavigationStack {
             DSWashedScreen {
                 VStack(alignment: .leading, spacing: DSSpacing.sectionGap) {
                     if workouts.isEmpty {
-                        Text("Noch keine Workouts angelegt")
-                            .font(DSFont.body)
-                            .foregroundStyle(DSColor.textSecondary)
+                        VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
+                            Text("Noch keine Workouts angelegt")
+                                .font(DSFont.body)
+                                .foregroundStyle(DSColor.textSecondary)
+                            DSButton(title: "Workout erstellen", icon: "dumbbell", fullWidth: true) {
+                                isPresentingNewWorkout = true
+                            }
+                        }
                     } else {
                         VStack(spacing: DSSpacing.cardGap) {
                             ForEach(workouts) { workout in
@@ -52,6 +59,9 @@ struct WorkoutPickerView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Abbrechen") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $isPresentingNewWorkout) {
+                WorkoutEditorView(context: modelContext)
             }
         }
     }

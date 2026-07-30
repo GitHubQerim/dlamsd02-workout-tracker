@@ -120,7 +120,12 @@ struct WorkoutEditorView: View {
                 labeledStepper("Sätze", value: draft.targetSets ?? 3, range: 1...10) { newValue in
                     viewModel.updateStrengthTargets(draftID: draft.id, sets: newValue, reps: draft.targetReps, weightKg: draft.targetWeightKg)
                 }
-                labeledStepper("Wdh.", value: draft.targetReps ?? 10, range: 1...30) { newValue in
+                DSWheelPickerField(
+                    label: "Wdh.",
+                    value: draft.targetReps ?? 10,
+                    options: Array(1...30),
+                    displayText: { "\($0)" }
+                ) { newValue in
                     viewModel.updateStrengthTargets(draftID: draft.id, sets: draft.targetSets, reps: newValue, weightKg: draft.targetWeightKg)
                 }
             }
@@ -145,7 +150,12 @@ struct WorkoutEditorView: View {
                     }
                 }
                 if let fieldOptions = viewModel.activityType.cardioFieldOptions, fieldOptions.showsDuration {
-                    labeledStepper("Dauer (Min.)", value: Int((draft.targetDurationSeconds ?? 600) / 60), range: 1...180) { newValue in
+                    DSWheelPickerField(
+                        label: "Dauer (Min.)",
+                        value: Int((draft.targetDurationSeconds ?? 600) / 60),
+                        options: Array(1...180),
+                        displayText: { "\($0)" }
+                    ) { newValue in
                         viewModel.updateSegmentTargets(id: draft.id, distanceMeters: draft.targetDistanceMeters, durationSeconds: Double(newValue) * 60)
                     }
                 }
