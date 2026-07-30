@@ -9,7 +9,6 @@ final class WorkoutSession {
     var activityType: ActivityType
     var startDate: Date
     var endDate: Date?
-    var notes: String?
 
     // Puls bleibt ein flaches, Session-weites Feld - nicht sinnvoll pro
     // Segment aufteilbar in dieser manuell erfassten App (ADR 0009).

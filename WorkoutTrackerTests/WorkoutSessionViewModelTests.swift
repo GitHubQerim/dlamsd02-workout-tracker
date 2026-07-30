@@ -73,19 +73,6 @@ struct WorkoutSessionViewModelTests {
         #expect(try context.fetchCount(FetchDescriptor<WorkoutSession>()) == 0)
     }
 
-    @Test func updateNotesSetsSessionNotes() throws {
-        let container = try makeInMemoryContainer()
-        let context = container.mainContext
-
-        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .laufen)
-
-        viewModel.updateNotes("Lief gut, Beine schwer.")
-        #expect(viewModel.session.notes == "Lief gut, Beine schwer.")
-
-        viewModel.updateNotes("")
-        #expect(viewModel.session.notes == nil)
-    }
-
     @Test func exerciseSectionsFollowPlanOrderWhenPlanExists() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext

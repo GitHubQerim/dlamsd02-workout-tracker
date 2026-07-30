@@ -4,7 +4,7 @@ import SwiftUI
 /// technology first") - eine Handvoll animierter Formen mit randomisiertem
 /// Offset/Rotation/Farbe, ausgelöst über `trigger`. Bewusst nur für
 /// Meilensteine gedacht (Rang-Aufstieg, Streak-Meilensteine), nicht für
-/// jeden normalen Elo-Gewinn - siehe `WorkoutFeedbackView`.
+/// jeden normalen Elo-Gewinn - siehe `WorkoutCompletionView`.
 struct ConfettiView: View {
     @Binding var trigger: Bool
     var pieceCount: Int = 24

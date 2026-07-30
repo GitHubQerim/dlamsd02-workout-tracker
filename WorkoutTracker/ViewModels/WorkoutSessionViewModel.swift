@@ -32,7 +32,7 @@ struct PreviousAttempt {
 
 /// Steuert eine laufende `WorkoutSession`. Dupliziert keine persistierten
 /// Felder als eigenen State - `session` ist bereits über `@Model` observable,
-/// die View bindet direkt gegen `session.startDate`/`session.notes`/etc.
+/// die View bindet direkt gegen `session.startDate`/`session.plan`/etc.
 /// Das ViewModel hält nur echten ephemeren State (Pausen-Timer) und die
 /// Mutator-Methoden. Kein eigener Task/Timer (siehe ADR 0003) - Gesamt- und
 /// Pausen-Timer werden in der View per `TimelineView` gegen `startDate`
@@ -54,7 +54,7 @@ final class WorkoutSessionViewModel: Identifiable {
 
     /// Ergebnis der Rang-/Elo-Reconciliation aus `finishSession()` (ADR
     /// 0014) - `nil` bis die Session beendet wurde, danach von
-    /// `WorkoutFeedbackView` für die Streak-/Elo-/Rang-Aufstieg-Anzeige
+    /// `WorkoutCompletionView` für die Streak-/Elo-/Rang-Aufstieg-Anzeige
     /// gelesen.
     private(set) var lastRankReconciliation: RankReconciliationResult?
 
@@ -386,10 +386,6 @@ final class WorkoutSessionViewModel: Identifiable {
         persist()
     }
 
-    func updateNotes(_ text: String) {
-        session.notes = text.isEmpty ? nil : text
-        persist()
-    }
 
     /// Schreibt nur Kraft-Sessions nach Apple Health (Cardio kommt
     /// ausschließlich per Import umgekehrt herein, siehe ADR 0012) - der

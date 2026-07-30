@@ -36,7 +36,7 @@ enum RankTuning {
 }
 
 /// Ergebnis eines einzelnen `RankEngine.reconcile`-Aufrufs - trägt alles,
-/// was die Feier-UI (`WorkoutFeedbackView`) bzw. die "Willkommen zurück"-
+/// was die Feier-UI (`WorkoutCompletionView`) bzw. die "Willkommen zurück"-
 /// Anzeige (`ChallengesView`) zur Darstellung braucht, statt dass die
 /// Aufrufer den `RankState` vorher/nachher selbst diffen müssen.
 struct RankReconciliationResult: Equatable {
@@ -55,7 +55,7 @@ struct RankReconciliationResult: Equatable {
     /// `true`, wenn diese Reconciliation Basis-/Streak-Bonus vergeben hat
     /// (erste Session eines Kalendertags) - Grundlage dafür, Meilenstein-
     /// Feiern (Confetti) nicht bei jeder weiteren Session desselben Tages
-    /// erneut auszulösen (siehe `WorkoutFeedbackView`).
+    /// erneut auszulösen (siehe `WorkoutCompletionView`).
     let awardedDailyBonus: Bool
 }
 
