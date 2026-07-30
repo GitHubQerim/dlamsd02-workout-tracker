@@ -18,8 +18,13 @@ struct WorkoutSessionView: View {
 
     @State private var isPresentingExercisePicker = false
     @State private var isPresentingFinishDialog = false
+    @State private var isPresentingFeedback = false
     @State private var expandedExerciseName: String?
-    @FocusState private var focusedField: SetRowField?
+    /// Solange ein `SetValueField` fokussiert ist, sitzt dessen Tastatur-
+    /// Toolbar (Quick-Adjust-Buttons) im selben Bereich wie die permanente
+    /// `finishBar` (`.safeAreaInset(edge: .bottom)`) - beide überlappen sich
+    /// sonst sichtbar. Blendet die Pille für diesen Zeitraum aus.
+    @State private var isAnyValueFieldFocused = false
     @Namespace private var expandNamespace
 
     private var activeExerciseName: String? {
@@ -32,10 +37,11 @@ struct WorkoutSessionView: View {
                 DSWashedScreen {
                     VStack(alignment: .leading, spacing: DSSpacing.sectionGap) {
                         TimelineView(.periodic(from: viewModel.session.startDate, by: 1)) { context in
-                            HStack(alignment: .firstTextBaseline) {
-                                Text(viewModel.session.activityType.displayName)
+                            HStack(alignment: .sessionHeaderBaseline) {
+                                Text(viewModel.displayTitle)
                                     .font(DSFont.score)
                                     .foregroundStyle(DSColor.textPrimary)
+                                    .alignmentGuide(.sessionHeaderBaseline) { $0[.firstTextBaseline] }
 
                                 Spacer()
 
@@ -51,6 +57,7 @@ struct WorkoutSessionView: View {
                                         .font(DSFont.score)
                                         .foregroundStyle(DSColor.textPrimary)
                                         .monospacedDigit()
+                                        .alignmentGuide(.sessionHeaderBaseline) { $0[.firstTextBaseline] }
                                 }
                             }
                         }
@@ -60,10 +67,12 @@ struct WorkoutSessionView: View {
                         } else {
                             cardioContent
                         }
-
-                        DSButton(title: "Training beenden", fullWidth: true) {
-                            isPresentingFinishDialog = true
-                        }
+                    }
+                }
+                .safeAreaInset(edge: .bottom) {
+                    if !isAnyValueFieldFocused {
+                        finishBar
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
                 .onChange(of: activeExerciseName) { _, newValue in
@@ -81,15 +90,14 @@ struct WorkoutSessionView: View {
                     }
                     .accessibilityLabel("Schließen")
                 }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Fertig") { focusedField = nil }
-                }
             }
             .sheet(isPresented: $isPresentingExercisePicker) {
                 ExercisePickerView { exercise in
                     viewModel.addSet(for: exercise)
                 }
+            }
+            .sheet(isPresented: $isPresentingFeedback, onDismiss: { dismiss() }) {
+                WorkoutFeedbackView(viewModel: viewModel)
             }
             .fullScreenCover(item: restTimerBinding) { presentation in
                 RestTimerView(
@@ -104,7 +112,7 @@ struct WorkoutSessionView: View {
                 Button("Speichern & beenden") {
                     Task {
                         await viewModel.finishSession()
-                        dismiss()
+                        isPresentingFeedback = true
                     }
                 }
                 Button("Verwerfen", role: .destructive) {
@@ -141,6 +149,60 @@ struct WorkoutSessionView: View {
         )
     }
 
+    /// Permanente schwebende Pille am unteren Bildschirmrand (Titel + Zeit +
+    /// "Workout beenden"), über `.safeAreaInset(edge: .bottom)` eingehängt statt als
+    /// `.overlay`, damit `DSWashedScreen`s interne ScrollView ihren
+    /// Content-Inset automatisch anpasst und das letzte Akkordeon-Element
+    /// nicht dauerhaft dahinter verschwindet. Gleiche Kapsel-Form wie die
+    /// system-gerenderte Liquid-Glass-Tab-Bar (ADR 0005), aber im eigenen
+    /// GreenDarkFitness-Look statt echtem Glas-Material - Content bleibt
+    /// Content, keine neue Ausnahme von der ADR nötig.
+    ///
+    /// Sind wirklich alle Sätze/Segmente abgehakt, inverten Bar- und
+    /// Button-Füllung (statt eines separaten Glow/Schimmer-Effekts) - dasselbe
+    /// "Farbe zeigt Vollständigkeit"-Muster wie bei `ActiveExerciseCard`/
+    /// `SetRow`/`CollapsedExerciseRow`, nur hier auf die permanente Pille
+    /// übertragen. Label wechselt von "beenden" auf "abschließen", weil es ab
+    /// diesem Punkt kein Abbruch mehr ist, sondern ein echter Abschluss.
+    @ViewBuilder
+    private var finishBar: some View {
+        let isComplete = viewModel.isWorkoutComplete
+
+        TimelineView(.periodic(from: viewModel.session.startDate, by: 1)) { context in
+            HStack(spacing: DSSpacing.stackGap) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(viewModel.displayTitle)
+                        .font(DSFont.body)
+                        .foregroundStyle(isComplete ? DSColor.textOnInvert : DSColor.textPrimary)
+                        .lineLimit(1)
+                    Text(context.date.timeIntervalSince(viewModel.session.startDate).formattedClock)
+                        .font(DSFont.caption)
+                        .foregroundStyle(isComplete ? DSColor.textOnInvert.opacity(0.7) : DSColor.textSecondary)
+                        .monospacedDigit()
+                }
+                .accessibilityElement(children: .combine)
+
+                Spacer()
+
+                Button(isComplete ? "Workout abschließen" : "Workout beenden") {
+                    isPresentingFinishDialog = true
+                }
+                .font(DSFont.body)
+                .foregroundStyle(isComplete ? DSColor.textPrimary : DSColor.textOnInvert)
+                .padding(.horizontal, DSSpacing.s16)
+                .frame(minHeight: 40)
+                .background(isComplete ? DSColor.surfaceCard : DSColor.accent, in: Capsule())
+            }
+            .padding(.horizontal, DSSpacing.s16)
+            .frame(minHeight: 56)
+            .background(isComplete ? DSColor.accent : DSColor.surfaceCard, in: Capsule())
+            .overlay(Capsule().stroke(DSColor.borderStrong, lineWidth: 1))
+            .padding(.horizontal, DSSpacing.screenGutter)
+            .padding(.bottom, DSSpacing.s8)
+            .animation(DSMotion.base, value: isComplete)
+        }
+    }
+
     @ViewBuilder
     private var strengthContent: some View {
         VStack(spacing: DSSpacing.cardGap) {
@@ -149,9 +211,13 @@ struct WorkoutSessionView: View {
                     ActiveExerciseCard(
                         section: section,
                         viewModel: viewModel,
-                        focusedField: $focusedField,
                         namespace: expandNamespace,
-                        onSetToggled: handleSetToggled
+                        onSetToggled: handleSetToggled,
+                        onFieldFocusChange: { focused in
+                            withAnimation(DSMotion.base) {
+                                isAnyValueFieldFocused = focused
+                            }
+                        }
                     )
                     .id(section.name)
                 } else {
@@ -247,16 +313,33 @@ struct WorkoutSessionView: View {
                 }
 
                 if let fieldOptions = viewModel.session.activityType.cardioFieldOptions, fieldOptions.showsDuration {
-                    Stepper(value: Binding(
-                        get: { (segmentLog.durationSeconds ?? 0) / 60 },
-                        set: { viewModel.updateSegment(segmentLog, distanceMeters: segmentLog.distanceMeters, durationSeconds: $0 * 60) }
-                    ), in: 0...180) {
-                        Text("Dauer: \(Int((segmentLog.durationSeconds ?? 0) / 60)) Min.")
-                            .font(DSFont.caption)
-                            .foregroundStyle(DSColor.textSecondary)
+                    DSWheelPickerField(
+                        label: "Dauer",
+                        value: Int((segmentLog.durationSeconds ?? 0) / 60),
+                        options: Array(0...180),
+                        displayText: { "\($0) Min." }
+                    ) { newValue in
+                        viewModel.updateSegment(segmentLog, distanceMeters: segmentLog.distanceMeters, durationSeconds: Double(newValue) * 60)
                     }
                 }
             }
         }
     }
+}
+
+/// Richtet den Session-Titel links an der Baseline der GROSSEN Zeit-Zahl
+/// rechts aus (nicht am kleinen "Gesamtzeit"-Label darüber). `.firstTextBaseline`
+/// am äußeren HStack würde sich sonst an der ERSTEN Zeile des rechten VStack
+/// orientieren - das ist das Label, nicht die Zeit. Beide Texte nutzen
+/// denselben `DSFont.score`, daher erzwingt das hier die exakte
+/// Baseline-Gleichheit statt sich auf zufällig passende Zeilenhöhen von
+/// `.center`/`.bottom` zu verlassen.
+private struct SessionHeaderBaseline: AlignmentID {
+    static func defaultValue(in context: ViewDimensions) -> CGFloat {
+        context[.firstTextBaseline]
+    }
+}
+
+private extension VerticalAlignment {
+    static let sessionHeaderBaseline = VerticalAlignment(SessionHeaderBaseline.self)
 }
