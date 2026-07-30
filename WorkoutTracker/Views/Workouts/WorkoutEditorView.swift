@@ -72,7 +72,9 @@ struct WorkoutEditorView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
-                    .frame(minHeight: CGFloat(viewModel.activityType.usesSetLogs ? viewModel.drafts.count : viewModel.segmentDrafts.count) * 72 + 16)
+                    // 96pt statt vormals 72pt/Zeile - siehe Kommentar in
+                    // WorkoutProgramEditorView.swift.
+                    .frame(minHeight: CGFloat(viewModel.activityType.usesSetLogs ? viewModel.drafts.count : viewModel.segmentDrafts.count) * 96 + 16)
 
                     if viewModel.activityType.usesSetLogs {
                         DSButton(title: "Übung hinzufügen", icon: "dumbbell", variant: .outline, fullWidth: true) {
@@ -93,15 +95,8 @@ struct WorkoutEditorView: View {
             }
             .navigationTitle(viewModel.isEditingExistingPlan ? "Workout bearbeiten" : "Neues Workout")
             .toolbar {
-                ToolbarItemGroup(placement: .topBarLeading) {
-                    // `.keyboardShortcut(.cancelAction)` statt der
-                    // `.cancellationAction`-Platzierung (die hier keinen
-                    // Platz mehr neben `EditButton()` hätte): erhält die
-                    // Escape-Taste-Bindung auf iPad/Mac Catalyst, die sonst
-                    // mit dem Wechsel auf `.topBarLeading` verloren ginge.
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Abbrechen") { dismiss() }
-                        .keyboardShortcut(.cancelAction)
-                    EditButton()
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Speichern") {
@@ -126,57 +121,65 @@ struct WorkoutEditorView: View {
 
     @ViewBuilder
     private func plannedExerciseRow(_ draft: WorkoutEditorViewModel.PlannedExerciseDraft) -> some View {
-        VStack(alignment: .leading, spacing: DSSpacing.s8) {
-            Text(draft.exercise.name)
-                .font(DSFont.body)
-                .foregroundStyle(DSColor.textPrimary)
+        HStack(spacing: DSSpacing.stackGap) {
+            VStack(alignment: .leading, spacing: DSSpacing.s8) {
+                Text(draft.exercise.name)
+                    .font(DSFont.body)
+                    .foregroundStyle(DSColor.textPrimary)
 
-            HStack(spacing: DSSpacing.stackGap) {
-                labeledStepper("Sätze", value: draft.targetSets ?? WorkoutEditorViewModel.defaultTargetSets, range: 1...10) { newValue in
-                    viewModel.updateStrengthTargets(draftID: draft.id, sets: newValue, reps: draft.targetReps, weightKg: draft.targetWeightKg)
-                }
-                DSWheelPickerField(
-                    label: "Wdh.",
-                    value: draft.targetReps ?? WorkoutEditorViewModel.defaultTargetReps,
-                    options: Array(1...30),
-                    displayText: { "\($0)" }
-                ) { newValue in
-                    viewModel.updateStrengthTargets(draftID: draft.id, sets: draft.targetSets, reps: newValue, weightKg: draft.targetWeightKg)
+                HStack(spacing: DSSpacing.stackGap) {
+                    labeledStepper("Sätze", value: draft.targetSets ?? WorkoutEditorViewModel.defaultTargetSets, range: 1...10) { newValue in
+                        viewModel.updateStrengthTargets(draftID: draft.id, sets: newValue, reps: draft.targetReps, weightKg: draft.targetWeightKg)
+                    }
+                    DSWheelPickerField(
+                        label: "Wdh.",
+                        value: draft.targetReps ?? WorkoutEditorViewModel.defaultTargetReps,
+                        options: Array(1...30),
+                        displayText: { "\($0)" }
+                    ) { newValue in
+                        viewModel.updateStrengthTargets(draftID: draft.id, sets: draft.targetSets, reps: newValue, weightKg: draft.targetWeightKg)
+                    }
                 }
             }
+            Spacer()
+            DragHandleIcon()
         }
-        .listRowBackground(DSColor.surfaceCard)
+        .reorderableRowStyle()
     }
 
     @ViewBuilder
     private func plannedSegmentRow(_ draft: WorkoutEditorViewModel.PlannedSegmentDraft) -> some View {
-        VStack(alignment: .leading, spacing: DSSpacing.s8) {
-            TextField("Bezeichnung", text: Binding(
-                get: { draft.label },
-                set: { viewModel.updateSegmentLabel(id: draft.id, $0) }
-            ))
-            .font(DSFont.body)
-            .foregroundStyle(DSColor.textPrimary)
+        HStack(spacing: DSSpacing.stackGap) {
+            VStack(alignment: .leading, spacing: DSSpacing.s8) {
+                TextField("Bezeichnung", text: Binding(
+                    get: { draft.label },
+                    set: { viewModel.updateSegmentLabel(id: draft.id, $0) }
+                ))
+                .font(DSFont.body)
+                .foregroundStyle(DSColor.textPrimary)
 
-            HStack(spacing: DSSpacing.stackGap) {
-                if let fieldOptions = viewModel.activityType.cardioFieldOptions, fieldOptions.showsDistance {
-                    labeledStepper("Distanz (km)", value: Int((draft.targetDistanceMeters ?? 1000) / 1000), range: 1...100) { newValue in
-                        viewModel.updateSegmentTargets(id: draft.id, distanceMeters: Double(newValue) * 1000, durationSeconds: draft.targetDurationSeconds)
+                HStack(spacing: DSSpacing.stackGap) {
+                    if let fieldOptions = viewModel.activityType.cardioFieldOptions, fieldOptions.showsDistance {
+                        labeledStepper("Distanz (km)", value: Int((draft.targetDistanceMeters ?? 1000) / 1000), range: 1...100) { newValue in
+                            viewModel.updateSegmentTargets(id: draft.id, distanceMeters: Double(newValue) * 1000, durationSeconds: draft.targetDurationSeconds)
+                        }
                     }
-                }
-                if let fieldOptions = viewModel.activityType.cardioFieldOptions, fieldOptions.showsDuration {
-                    DSWheelPickerField(
-                        label: "Dauer (Min.)",
-                        value: Int((draft.targetDurationSeconds ?? 600) / 60),
-                        options: Array(1...180),
-                        displayText: { "\($0)" }
-                    ) { newValue in
-                        viewModel.updateSegmentTargets(id: draft.id, distanceMeters: draft.targetDistanceMeters, durationSeconds: Double(newValue) * 60)
+                    if let fieldOptions = viewModel.activityType.cardioFieldOptions, fieldOptions.showsDuration {
+                        DSWheelPickerField(
+                            label: "Dauer (Min.)",
+                            value: Int((draft.targetDurationSeconds ?? 600) / 60),
+                            options: Array(1...180),
+                            displayText: { "\($0)" }
+                        ) { newValue in
+                            viewModel.updateSegmentTargets(id: draft.id, distanceMeters: draft.targetDistanceMeters, durationSeconds: Double(newValue) * 60)
+                        }
                     }
                 }
             }
+            Spacer()
+            DragHandleIcon()
         }
-        .listRowBackground(DSColor.surfaceCard)
+        .reorderableRowStyle()
     }
 
     private func labeledStepper(_ label: String, value: Int, range: ClosedRange<Int>, onChange: @escaping (Int) -> Void) -> some View {
