@@ -98,7 +98,13 @@ final class WorkoutEditorViewModel {
             validationMessage = "\(exercise.name) ist bereits Teil dieses Workouts."
             return false
         }
-        drafts.append(PlannedExerciseDraft(id: UUID(), exercise: exercise, existing: nil))
+        // Defaults identisch zur Anzeige in WorkoutEditorView (draft.targetSets ?? 3 /
+        // draft.targetReps ?? 10) - direkt im Draft setzen statt nur kosmetisch in der
+        // UI anzuzeigen, sonst persistiert save() ohne Nutzerinteraktion `nil` und
+        // WorkoutSessionViewModel.makeSession() fällt beim Sessionstart auf 1×0 zurück.
+        drafts.append(
+            PlannedExerciseDraft(id: UUID(), exercise: exercise, targetSets: 3, targetReps: 10, existing: nil)
+        )
         return true
     }
 
