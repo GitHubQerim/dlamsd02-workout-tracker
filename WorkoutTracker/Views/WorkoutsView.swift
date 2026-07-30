@@ -1,6 +1,11 @@
 import SwiftUI
 import SwiftData
 
+private enum WorkoutsTab: String, CaseIterable {
+    case plans = "Pläne"
+    case workouts = "Workouts"
+}
+
 struct WorkoutsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Workout.createdAt, order: .reverse) private var plans: [Workout]
@@ -10,8 +15,20 @@ struct WorkoutsView: View {
     @State private var isPresentingNewPlan = false
     @State private var isPresentingNewProgram = false
     @State private var freeTrainingSessionViewModel: WorkoutSessionViewModel?
+    @State private var selectedTab: WorkoutsTab = .plans
 
     private var hasOpenSession: Bool { !openSessions.isEmpty }
+
+    /// Workouts nach `ActivityType` gruppiert, in der festen `allCases`-
+    /// Reihenfolge statt der unbestimmten Dictionary-Reihenfolge. Innerhalb
+    /// einer Gruppe bleibt die Query-Sortierung (neueste zuerst) erhalten.
+    private var groupedPlans: [(ActivityType, [Workout])] {
+        let grouped = Dictionary(grouping: plans, by: \.activityType)
+        return ActivityType.allCases.compactMap { type in
+            guard let items = grouped[type], !items.isEmpty else { return nil }
+            return (type, items)
+        }
+    }
 
     var body: some View {
         DSWashedScreen {
@@ -20,58 +37,71 @@ struct WorkoutsView: View {
                     openSessionBanner(openSession)
                 }
 
-                Text("Deine Pläne")
-                    .font(DSFont.label)
-                    .foregroundStyle(DSColor.textSecondary)
-
-                DSButton(title: "Plan erstellen", icon: "calendar", fullWidth: true) {
-                    isPresentingNewProgram = true
-                }
-                .disabled(hasOpenSession)
-
-                if !programs.isEmpty {
-                    VStack(spacing: DSSpacing.cardGap) {
-                        ForEach(programs) { program in
-                            NavigationLink {
-                                WorkoutProgramDetailView(program: program)
-                            } label: {
-                                programCard(program)
-                            }
-                            .buttonStyle(.plain)
+                HStack(spacing: DSSpacing.s8) {
+                    ForEach(WorkoutsTab.allCases, id: \.self) { tab in
+                        DSChip(title: tab.rawValue, active: selectedTab == tab) {
+                            selectedTab = tab
                         }
                     }
                 }
 
-                DSButton(title: "Neues Workout", icon: "dumbbell", fullWidth: true) {
-                    isPresentingNewPlan = true
-                }
-                .disabled(hasOpenSession)
+                if selectedTab == .plans {
+                    DSButton(title: "Plan erstellen", icon: "calendar", fullWidth: true) {
+                        isPresentingNewProgram = true
+                    }
+                    .disabled(hasOpenSession)
 
-                if plans.isEmpty {
-                    Text("Noch keine Workouts angelegt")
-                        .font(DSFont.body)
-                        .foregroundStyle(DSColor.textSecondary)
+                    if programs.isEmpty {
+                        Text("Noch keine Pläne erstellt")
+                            .font(DSFont.body)
+                            .foregroundStyle(DSColor.textSecondary)
+                    } else {
+                        VStack(spacing: DSSpacing.cardGap) {
+                            ForEach(programs) { program in
+                                NavigationLink {
+                                    WorkoutProgramDetailView(program: program)
+                                } label: {
+                                    programCard(program)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
                 } else {
-                    VStack(spacing: DSSpacing.cardGap) {
-                        ForEach(plans) { plan in
-                            NavigationLink {
-                                WorkoutDetailView(plan: plan)
-                            } label: {
-                                DSCard {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: DSSpacing.s4) {
-                                            Text(plan.name)
-                                                .font(DSFont.body)
-                                                .foregroundStyle(DSColor.textPrimary)
-                                            Text(plan.activityType.displayName)
-                                                .font(DSFont.caption)
-                                                .foregroundStyle(DSColor.textTertiary)
+                    DSButton(title: "Neues Workout", icon: "dumbbell", fullWidth: true) {
+                        isPresentingNewPlan = true
+                    }
+                    .disabled(hasOpenSession)
+
+                    if plans.isEmpty {
+                        Text("Noch keine Workouts angelegt")
+                            .font(DSFont.body)
+                            .foregroundStyle(DSColor.textSecondary)
+                    } else {
+                        VStack(alignment: .leading, spacing: DSSpacing.cardGap) {
+                            ForEach(groupedPlans, id: \.0) { activityType, items in
+                                Text(activityType.displayName)
+                                    .font(DSFont.caption)
+                                    .foregroundStyle(DSColor.textTertiary)
+
+                                VStack(spacing: DSSpacing.cardGap) {
+                                    ForEach(items) { plan in
+                                        NavigationLink {
+                                            WorkoutDetailView(plan: plan)
+                                        } label: {
+                                            DSCard {
+                                                HStack {
+                                                    Text(plan.name)
+                                                        .font(DSFont.body)
+                                                        .foregroundStyle(DSColor.textPrimary)
+                                                    Spacer()
+                                                }
+                                            }
                                         }
-                                        Spacer()
+                                        .buttonStyle(.plain)
                                     }
                                 }
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
