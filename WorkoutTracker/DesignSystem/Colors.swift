@@ -32,6 +32,20 @@ enum DSColor {
     // Secondary violet — reserved for negative/"incorrect" states only, never a UI accent
     static let violet500 = Color(hex: 0x935be2)
 
+    // Rank-tier colors (Elo/Rang-Gamification, ADR 0014) — scoped ONLY to
+    // rank badges/progress rings (RankBadge, RankSectionCard). Do NOT use
+    // elsewhere: the one-accent-color principle above still governs the
+    // rest of the UI. Deliberately outside the violet family (reserved for
+    // negative states, see above). Placeholder tones, not a finished visual
+    // design pass — adjust freely during review.
+    static let rankBronze = Color(hex: 0xcd7f32)
+    static let rankSilver = Color(hex: 0xb8bcc2)
+    static let rankGold = Color(hex: 0xe0b23a)
+    static let rankPlatin = Color(hex: 0xd7dee0)
+    static let rankDiamond = Color(hex: 0x5fd0c9)
+    static let rankMaster = Color(hex: 0x3f6fd6)
+    static let rankChallenger = Color(hex: 0xe0763a)
+
     // Semantic surfaces
     static let surfaceBase = n900
     static let surfaceCard = n800

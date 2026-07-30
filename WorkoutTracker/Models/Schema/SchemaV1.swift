@@ -18,6 +18,7 @@ enum SchemaV1: VersionedSchema {
             PlannedSegment.self,
             SegmentLog.self,
             PersonalRecord.self,
+            RankState.self,
         ]
     }
 }

@@ -46,4 +46,22 @@ final class ChallengesViewModel {
             validationMessage = "Verlassen fehlgeschlagen: \(error.localizedDescription)"
         }
     }
+
+    /// Trigger 2 der Rang-Reconciliation (ADR 0014): reine Decay-Nachholung
+    /// beim Betreten des Challenges-Tabs, kein Elo-Gewinn (keine neue
+    /// Session existiert bei diesem Trigger). Mutiert über `context` hier im
+    /// ViewModel statt direkt in der View (MVVM-Konvention dieses Projekts),
+    /// speichert direkt wie `join`/`leave` oben (anders als die Session-
+    /// Abschluss-Erweiterungen, die dem Aufrufer einen gebündelten `persist()`
+    /// überlassen - hier gibt es keinen weiteren Mutationsschritt danach).
+    @discardableResult
+    func reconcileRankDecayOnAppear(calendar: Calendar = .current, today: Date = .now) -> RankReconciliationResult {
+        let result = RankState.reconcileDecayOnly(in: context, calendar: calendar, today: today)
+        do {
+            try context.save()
+        } catch {
+            validationMessage = "Rang-Aktualisierung fehlgeschlagen: \(error.localizedDescription)"
+        }
+        return result
+    }
 }
