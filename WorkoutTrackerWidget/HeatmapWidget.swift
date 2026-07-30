@@ -18,13 +18,24 @@ struct HeatmapTimelineProvider: TimelineProvider {
         completion(currentEntry())
     }
 
+    /// Reload-Policy ist bewusst NICHT `.never`: der Snapshot-Inhalt selbst
+    /// ändert sich zwar nur bei App-Start/Session-Ende, aber welcher Tag
+    /// "heute" ist, ändert sich auch ohne neue Trainingsdaten - jede
+    /// Mitternacht ist also eine "relevante Änderung", die WidgetKit von
+    /// sich aus erneut anfragen muss, sonst bleibt die Anzeige nach einem
+    /// App-losen Tag einen Tag hinter der Zeit zurück.
     func getTimeline(in context: Context, completion: @escaping (Timeline<HeatmapEntry>) -> Void) {
-        completion(Timeline(entries: [currentEntry()], policy: .never))
+        completion(Timeline(entries: [currentEntry()], policy: .after(Self.nextRefreshDate())))
     }
 
     private func currentEntry() -> HeatmapEntry {
         let snapshot = WidgetSnapshotStore.read(HeatmapSnapshot.self, filename: HeatmapSnapshot.filename)
-        return HeatmapEntry(date: .now, days: snapshot?.days ?? [])
+        return HeatmapEntry(date: .now, days: (snapshot?.days ?? []).extendedToToday())
+    }
+
+    private static func nextRefreshDate(calendar: Calendar = .current) -> Date {
+        calendar.nextDate(after: .now, matching: DateComponents(hour: 0, minute: 5), matchingPolicy: .nextTime)
+            ?? Date.now.addingTimeInterval(86_400)
     }
 }
 

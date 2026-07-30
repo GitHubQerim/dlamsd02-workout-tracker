@@ -31,4 +31,32 @@ struct WidgetSnapshotWritingTests {
         #expect(decoded.days.map(\.count) == [0, 2])
         #expect(decoded.days.map(\.date) == days.map(\.date))
     }
+
+    @Test func extendedToTodayFillsMissingDaysWithZero() throws {
+        let calendar = Calendar.current
+        let twoDaysAgo = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_000_000))
+        let today = calendar.date(byAdding: .day, value: 2, to: twoDaysAgo)!
+        let days = [DayCount(date: twoDaysAgo, count: 3)]
+
+        let extended = days.extendedToToday(calendar: calendar, today: today)
+
+        #expect(extended.count == 3)
+        #expect(extended[0].date == twoDaysAgo)
+        #expect(extended[0].count == 3)
+        #expect(extended[1].count == 0)
+        #expect(extended[2].date == today)
+        #expect(extended[2].count == 0)
+    }
+
+    @Test func extendedToTodayIsNoOpWhenAlreadyCurrent() throws {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let days = [DayCount(date: today, count: 1)]
+
+        let extended = days.extendedToToday(calendar: calendar, today: today)
+
+        #expect(extended.count == 1)
+        #expect(extended.map(\.date) == days.map(\.date))
+        #expect(extended.map(\.count) == days.map(\.count))
+    }
 }
