@@ -9,6 +9,8 @@ struct WorkoutEditorView: View {
 
     @State private var viewModel: WorkoutEditorViewModel
     @State private var isPresentingExercisePicker = false
+    @State private var pendingDraftDeletion: UUID?
+    @State private var pendingSegmentDeletion: UUID?
 
     /// `context` wird vom Aufrufer explizit übergeben (aus dessen eigenem
     /// `@Environment(\.modelContext)`) statt hier selbst einen Container zu
@@ -51,7 +53,7 @@ struct WorkoutEditorView: View {
                                 plannedExerciseRow(draft)
                             }
                             .onDelete { offsets in
-                                offsets.forEach { viewModel.removeDraft(id: viewModel.drafts[$0].id) }
+                                pendingDraftDeletion = offsets.first.map { viewModel.drafts[$0].id }
                             }
                             .onMove { source, destination in
                                 viewModel.moveDrafts(from: source, to: destination)
@@ -61,7 +63,7 @@ struct WorkoutEditorView: View {
                                 plannedSegmentRow(draft)
                             }
                             .onDelete { offsets in
-                                offsets.forEach { viewModel.removeSegmentDraft(id: viewModel.segmentDrafts[$0].id) }
+                                pendingSegmentDeletion = offsets.first.map { viewModel.segmentDrafts[$0].id }
                             }
                             .onMove { source, destination in
                                 viewModel.moveSegmentDrafts(from: source, to: destination)
@@ -91,8 +93,15 @@ struct WorkoutEditorView: View {
             }
             .navigationTitle(viewModel.isEditingExistingPlan ? "Workout bearbeiten" : "Neues Workout")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    // `.keyboardShortcut(.cancelAction)` statt der
+                    // `.cancellationAction`-Platzierung (die hier keinen
+                    // Platz mehr neben `EditButton()` hätte): erhält die
+                    // Escape-Taste-Bindung auf iPad/Mac Catalyst, die sonst
+                    // mit dem Wechsel auf `.topBarLeading` verloren ginge.
                     Button("Abbrechen") { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                    EditButton()
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Speichern") {
@@ -106,6 +115,12 @@ struct WorkoutEditorView: View {
                     viewModel.addExercise(exercise)
                 }
             }
+            .confirmRemoval(title: "Übung entfernen?", pendingID: $pendingDraftDeletion) { id in
+                viewModel.removeDraft(id: id)
+            }
+            .confirmRemoval(title: "Segment entfernen?", pendingID: $pendingSegmentDeletion) { id in
+                viewModel.removeSegmentDraft(id: id)
+            }
         }
     }
 
@@ -117,12 +132,12 @@ struct WorkoutEditorView: View {
                 .foregroundStyle(DSColor.textPrimary)
 
             HStack(spacing: DSSpacing.stackGap) {
-                labeledStepper("Sätze", value: draft.targetSets ?? 3, range: 1...10) { newValue in
+                labeledStepper("Sätze", value: draft.targetSets ?? WorkoutEditorViewModel.defaultTargetSets, range: 1...10) { newValue in
                     viewModel.updateStrengthTargets(draftID: draft.id, sets: newValue, reps: draft.targetReps, weightKg: draft.targetWeightKg)
                 }
                 DSWheelPickerField(
                     label: "Wdh.",
-                    value: draft.targetReps ?? 10,
+                    value: draft.targetReps ?? WorkoutEditorViewModel.defaultTargetReps,
                     options: Array(1...30),
                     displayText: { "\($0)" }
                 ) { newValue in

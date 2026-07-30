@@ -23,8 +23,16 @@ extension WorkoutProgram {
         )
         guard let recentSessions = try? context.fetch(descriptor) else { return orderedEntries.first }
 
+        // Kein Force-Unwrap auf `programEntryID!`: das vorherige Fetch-
+        // Predicate kombiniert zwei Optional-nil-Checks mit `&&`, was in
+        // diesem SwiftData-Setup nicht immer zuverlässig durchgesetzt wird
+        // (ADR 0001) - ein sicheres Un-wrap hier behebt das Risiko
+        // unabhängig davon, ob das Predicate tatsächlich der Auslöser ist.
         guard
-            let lastEntryID = recentSessions.first(where: { entryIDs.contains($0.programEntryID!) })?.programEntryID,
+            let lastEntryID = recentSessions.first(where: { session in
+                guard let entryID = session.programEntryID else { return false }
+                return entryIDs.contains(entryID)
+            })?.programEntryID,
             let lastIndex = orderedEntries.firstIndex(where: { $0.id == lastEntryID })
         else {
             return orderedEntries.first

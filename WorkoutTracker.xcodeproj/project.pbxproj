@@ -43,6 +43,7 @@
 		4D8513FB31BA55FB1B7C0D03 /* WorkoutEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D5FC53ECB47CACEC61CB1C /* WorkoutEditorView.swift */; };
 		505F860F5C821895B0A70801 /* WidgetSnapshotWritingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9EFA2C1186AE82F016C4C25 /* WidgetSnapshotWritingTests.swift */; };
 		55E521C3F8E44740B3D58CFF /* WorkoutPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C784CB0D77C65225C03B476C /* WorkoutPickerView.swift */; };
+		56D314C40AAC355B670987E8 /* WorkoutProgramNextEntryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B44F2E3329C3B2F7D11F03 /* WorkoutProgramNextEntryTests.swift */; };
 		576C74D76FD15C96406A071C /* SchemaV1+Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 229A4F2A427C46ED9E4C3FF4 /* SchemaV1+Exercise.swift */; };
 		59FDD48D09918595E35632CF /* ChallengeEnrollmentCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8546DD1635FEFD84843BBA18 /* ChallengeEnrollmentCard.swift */; };
 		5B05AF44995CBDE1C540B224 /* RecentPersonalRecordsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4C8B7F10488E935DA92BD24 /* RecentPersonalRecordsList.swift */; };
@@ -108,6 +109,7 @@
 		E8F14E95FDFED307B2DC2042 /* WorkoutTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48BD9386FBE1872BB0B6849 /* WorkoutTrackerApp.swift */; };
 		EAB5907339D101CCC12CDBCD /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44DF0B8D665CFD0171B24381 /* TestSupport.swift */; };
 		EB968A728441404991A81F55 /* ChallengeInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A322E4D8C8D98D2E12B176 /* ChallengeInsights.swift */; };
+		EBD8F29B982AE0D8C3F66299 /* ConfirmRemovalModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A022AEC657531922AE098FCC /* ConfirmRemovalModifier.swift */; };
 		ED1A3B0AC65B39F7CC9E7C35 /* SetValueField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E904D183883B00315E573FE /* SetValueField.swift */; };
 		EDEBD13ED80684980689CFA4 /* ExerciseSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF513B74434682866955CBD /* ExerciseSeeder.swift */; };
 		EE17AC9D900894DCB00696A4 /* SchemaV1+Workout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B12D81333B0806B656CF51 /* SchemaV1+Workout.swift */; };
@@ -158,6 +160,7 @@
 
 /* Begin PBXFileReference section */
 		012562F78F4D201BFF4EEE9E /* DayStreakCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayStreakCalculator.swift; sourceTree = "<group>"; };
+		02B44F2E3329C3B2F7D11F03 /* WorkoutProgramNextEntryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProgramNextEntryTests.swift; sourceTree = "<group>"; };
 		02FB8A6EE359FFE8DCB7D641 /* PreviousSessionComparisonCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviousSessionComparisonCard.swift; sourceTree = "<group>"; };
 		03D99329D2EDA9EDD0AD4BDF /* DayCount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayCount.swift; sourceTree = "<group>"; };
 		0708FC1DE47BA8E8E88A568D /* WorkoutsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutsView.swift; sourceTree = "<group>"; };
@@ -227,6 +230,7 @@
 		99438448D197E4D1601D1F8A /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		9BD43E123BAA745B91E2E6B5 /* WorkoutProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProgramDetailView.swift; sourceTree = "<group>"; };
 		9F7C443464076FF798316624 /* ActivityType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityType.swift; sourceTree = "<group>"; };
+		A022AEC657531922AE098FCC /* ConfirmRemovalModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmRemovalModifier.swift; sourceTree = "<group>"; };
 		A39E9AD8A84C54758A03A6D1 /* SchemaV1+WorkoutProgram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+WorkoutProgram.swift"; sourceTree = "<group>"; };
 		AAA716CA17B45F1F243DC6BC /* WorkoutTrackerMigrationPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTrackerMigrationPlan.swift; sourceTree = "<group>"; };
 		AD4B6872789BA77DBA1E3D6E /* RankTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankTests.swift; sourceTree = "<group>"; };
@@ -307,6 +311,7 @@
 			isa = PBXGroup;
 			children = (
 				9740A36DD9E21FE2734F6494 /* ConfettiView.swift */,
+				A022AEC657531922AE098FCC /* ConfirmRemovalModifier.swift */,
 				1576F058778640D9FED820FC /* DSButton.swift */,
 				3E2CEEC7AA6D455458C8ED9C /* DSCard.swift */,
 				5C1D2F378421F5BFF3660837 /* DSChip.swift */,
@@ -464,6 +469,7 @@
 				44DF0B8D665CFD0171B24381 /* TestSupport.swift */,
 				D9EFA2C1186AE82F016C4C25 /* WidgetSnapshotWritingTests.swift */,
 				882F1CDA0D7699CF1E2AF2F8 /* WorkoutEditorViewModelTests.swift */,
+				02B44F2E3329C3B2F7D11F03 /* WorkoutProgramNextEntryTests.swift */,
 				3B60D8CBFDE805C98DE270F5 /* WorkoutSessionViewModelTests.swift */,
 				4F44579DA49B4E25AC4AF656 /* Support */,
 			);
@@ -716,6 +722,7 @@
 				EAB5907339D101CCC12CDBCD /* TestSupport.swift in Sources */,
 				505F860F5C821895B0A70801 /* WidgetSnapshotWritingTests.swift in Sources */,
 				86B8F5AFCA6F760E0A9FA220 /* WorkoutEditorViewModelTests.swift in Sources */,
+				56D314C40AAC355B670987E8 /* WorkoutProgramNextEntryTests.swift in Sources */,
 				07016E310FA677ABFA070E29 /* WorkoutSessionViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -737,6 +744,7 @@
 				3A44E88F5141E0D29BD98168 /* CollapsedExerciseRow.swift in Sources */,
 				376A7EA1D82D59E1876E3656 /* Colors.swift in Sources */,
 				88E6A9AF62115683AB2CA60B /* ConfettiView.swift in Sources */,
+				EBD8F29B982AE0D8C3F66299 /* ConfirmRemovalModifier.swift in Sources */,
 				BA532A5A6FA98C950510B2D2 /* ContentView.swift in Sources */,
 				91EB7932AB3CAF8862687CA5 /* ContributionHeatmapView.swift in Sources */,
 				7740FF94DD6F668BD9A0D46B /* DSButton.swift in Sources */,
