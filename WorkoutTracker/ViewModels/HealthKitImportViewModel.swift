@@ -63,6 +63,13 @@ final class HealthKitImportViewModel {
         segmentLog.session = session
         context.insert(segmentLog)
 
+        // Importierte Sessions sind genauso "abgeschlossen" wie lokal
+        // beendete - ohne diesen Aufruf würde die Streak (die aus der
+        // Session-Historie lebt) einen importierten Trainingstag zeigen,
+        // während der Rang/Decay-Zustand (der nur bei Session-Abschluss
+        // reconciled wird) davon nichts weiß - siehe ADR 0014.
+        session.updateRankProgress(in: context)
+
         try? context.save()
         importableWorkouts.removeAll { $0.id == sample.id }
         WidgetSnapshotRefresher.refresh(context: context)

@@ -9,8 +9,10 @@ struct ChallengesView: View {
     @Query(sort: \Challenge.name) private var challenges: [Challenge]
     @Query(sort: \WorkoutSession.startDate, order: .reverse) private var sessions: [WorkoutSession]
     @Query(sort: \PersonalRecord.achievedAt, order: .reverse) private var personalRecords: [PersonalRecord]
+    @Query private var rankStates: [RankState]
 
     @State private var viewModel: ChallengesViewModel?
+    @State private var rankWelcomeBack: RankReconciliationResult?
 
     private var completedSessions: [WorkoutSession] {
         sessions.filter { $0.endDate != nil }
@@ -24,6 +26,8 @@ struct ChallengesView: View {
         challenges.filter { $0.enrollments.isEmpty }
     }
 
+    private var rankState: RankState? { rankStates.first }
+
     var body: some View {
         DSWashedScreen {
             ScrollView {
@@ -31,6 +35,15 @@ struct ChallengesView: View {
                     Text("Challenges")
                         .font(DSFont.screenTitle)
                         .foregroundStyle(DSColor.textPrimary)
+
+                    if let rankState {
+                        RankSectionCard(
+                            elo: rankState.currentElo,
+                            tier: RankEngine.tier(forElo: rankState.currentElo),
+                            streakDays: RankEngine.globalStreakDays(from: completedSessions),
+                            welcomeBack: rankWelcomeBack
+                        )
+                    }
 
                     if !enrolledChallenges.isEmpty {
                         Text("Deine Challenges")
@@ -76,6 +89,10 @@ struct ChallengesView: View {
             if viewModel == nil {
                 viewModel = ChallengesViewModel(context: modelContext)
             }
+            // Jeder Aufruf reconciled (nicht nur beim ersten Erscheinen) -
+            // das ist genau die Invariante, auf die sich `RankEngine.reconcile`
+            // verlässt (siehe dessen Doc-Kommentar).
+            rankWelcomeBack = viewModel?.reconcileRankDecayOnAppear()
         }
     }
 }

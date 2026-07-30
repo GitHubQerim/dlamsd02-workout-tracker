@@ -19,14 +19,20 @@ enum ChallengeInsights {
     /// Nachtrag Phase D).
     static func topVolumeExercises(from sessions: [WorkoutSession], limit: Int = 5) -> [ExerciseVolume] {
         let completedSetLogs = sessions.filter { $0.endDate != nil }.flatMap(\.setLogs)
-        let grouped = Dictionary(grouping: completedSetLogs, by: \.exerciseName)
-        let volumes = grouped.map { exerciseName, logs in
-            ExerciseVolume(
-                exerciseName: exerciseName,
-                totalVolume: logs.reduce(0) { $0 + Double($1.reps) * $1.weightKg }
-            )
+        let grouped = volumeByExercise(completedSetLogs)
+        let volumes = grouped.map { exerciseName, totalVolume in
+            ExerciseVolume(exerciseName: exerciseName, totalVolume: totalVolume)
         }
         return Array(volumes.sorted { $0.totalVolume > $1.totalVolume }.prefix(limit))
+    }
+
+    /// Trainingsvolumen (Σ Wdh. × Gewicht je Satz) gruppiert nach Übungsname
+    /// - gemeinsame Formel für `topVolumeExercises` und den Überlastungs-
+    /// Bonus des Rang-Systems (ADR 0014, `WorkoutSession.updateRankProgress`),
+    /// damit "was zählt als Volumen" nur an einer Stelle definiert ist.
+    static func volumeByExercise(_ setLogs: [SetLog]) -> [String: Double] {
+        Dictionary(grouping: setLogs, by: \.exerciseName)
+            .mapValues { logs in logs.reduce(0) { $0 + Double($1.reps) * $1.weightKg } }
     }
 
     /// Ein Aggregat (Session-Anzahl) pro Kalendertag über ein rollierendes
@@ -70,29 +76,11 @@ enum ChallengeInsights {
     /// Aktuelle Streak-Länge in Tagen: zählt konsekutive Kalendertage
     /// rückwärts ab dem neuesten Eintrag, bricht bei der ersten Lücke ab.
     /// `0`, wenn der neueste Eintrag weder heute noch gestern liegt (Streak
-    /// bereits gerissen).
+    /// bereits gerissen). Kernlogik ausgelagert in `DayStreakCalculator`,
+    /// gemeinsam genutzt mit der globalen Rang-Streak (`RankEngine.globalStreakDays`).
     static func currentStreakDays(entries: [ChallengeProgressEntry], calendar: Calendar = .current, today: Date = .now) -> Int {
         let uniqueDays = Set(entries.map { calendar.startOfDay(for: $0.date) })
-        let todayStart = calendar.startOfDay(for: today)
-        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: todayStart) else { return 0 }
-
-        let anchor: Date
-        if uniqueDays.contains(todayStart) {
-            anchor = todayStart
-        } else if uniqueDays.contains(yesterday) {
-            anchor = yesterday
-        } else {
-            return 0
-        }
-
-        var streak = 0
-        var cursor = anchor
-        while uniqueDays.contains(cursor) {
-            streak += 1
-            guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
-            cursor = previous
-        }
-        return streak
+        return DayStreakCalculator.currentStreak(uniqueDays: uniqueDays, calendar: calendar, today: today)
     }
 
     /// Anzahl Fortschritts-Einträge in der laufenden ISO-Kalenderwoche -

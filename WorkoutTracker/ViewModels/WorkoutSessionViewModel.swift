@@ -52,6 +52,12 @@ final class WorkoutSessionViewModel: Identifiable {
     var restTimerDuration: TimeInterval = 90
     private var liveActivity: Activity<WorkoutSessionActivityAttributes>?
 
+    /// Ergebnis der Rang-/Elo-Reconciliation aus `finishSession()` (ADR
+    /// 0014) - `nil` bis die Session beendet wurde, danach von
+    /// `WorkoutFeedbackView` für die Streak-/Elo-/Rang-Aufstieg-Anzeige
+    /// gelesen.
+    private(set) var lastRankReconciliation: RankReconciliationResult?
+
     var isRestTimerRunning: Bool { restTimerStartDate != nil }
 
     init(context: ModelContext, session: WorkoutSession, healthKitService: HealthKitServicing = HealthKitService()) {
@@ -216,33 +222,26 @@ final class WorkoutSessionViewModel: Identifiable {
 
     /// Letzte ABGESCHLOSSENE, andere Session, die mindestens einen Satz zu
     /// `exerciseName` enthält - Grundlage für den "Letztes Mal"-Vergleich.
-    /// Bewusst kein `#Predicate` über die `setLogs`-Relationship (siehe ADR
-    /// 0001: SwiftData kann Relationship-Traversierung dort nicht zuverlässig
-    /// abbilden) - stattdessen ein einfacher, nach Datum sortierter Fetch
-    /// aller fremden abgeschlossenen Sessions, danach Swift-seitiger Scan
-    /// mit frühem Abbruch beim ersten Treffer.
+    /// Fetch+Scan ausgelagert in `WorkoutSession.mostRecentCompletedSession`
+    /// (`Support/PreviousSessionLookup.swift`), gemeinsam genutzt mit dem
+    /// Überlastungs-Bonus des Rang-Systems (ADR 0014).
     func previousAttempt(for exerciseName: String) -> PreviousAttempt? {
-        let currentID = session.id
-        let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate { $0.endDate != nil && $0.id != currentID },
-            sortBy: [SortDescriptor(\.startDate, order: .reverse)]
-        )
-        guard let candidates = try? context.fetch(descriptor) else { return nil }
+        guard let candidate = WorkoutSession.mostRecentCompletedSession(
+            containingExerciseName: exerciseName,
+            excluding: session.id,
+            in: context
+        ) else { return nil }
 
-        for candidate in candidates {
-            let matchingSets = candidate.setLogs
-                .filter { $0.exerciseName == exerciseName }
-                .sorted { $0.setIndex < $1.setIndex }
-            guard !matchingSets.isEmpty else { continue }
-            return PreviousAttempt(
-                date: candidate.startDate,
-                planName: candidate.plan?.name,
-                sets: matchingSets.map {
-                    PreviousSetSnapshot(setIndex: $0.setIndex, reps: $0.reps, weightKg: $0.weightKg)
-                }
-            )
-        }
-        return nil
+        let matchingSets = candidate.setLogs
+            .filter { $0.exerciseName == exerciseName }
+            .sorted { $0.setIndex < $1.setIndex }
+        return PreviousAttempt(
+            date: candidate.startDate,
+            planName: candidate.plan?.name,
+            sets: matchingSets.map {
+                PreviousSetSnapshot(setIndex: $0.setIndex, reps: $0.reps, weightKg: $0.weightKg)
+            }
+        )
     }
 
     func toggleSetCompletion(_ setLog: SetLog) {
@@ -413,6 +412,7 @@ final class WorkoutSessionViewModel: Identifiable {
         session.endDate = .now
         session.materializeChallengeProgress(in: context)
         session.detectAndPersistPersonalRecords(in: context)
+        lastRankReconciliation = session.updateRankProgress(in: context)
         restTimerStartDate = nil
         persist()
         WidgetSnapshotRefresher.refresh(context: context)
