@@ -12,9 +12,10 @@ import SwiftData
 struct ActiveExerciseCard: View {
     let section: ExerciseSection
     let viewModel: WorkoutSessionViewModel
-    var focusedField: FocusState<SetRowField?>.Binding
     var namespace: Namespace.ID
     let onSetToggled: (SetLog, String) -> Void
+    /// Durchgereicht an jede `SetRow`, siehe `SetValueField.onFocusChange`.
+    var onFieldFocusChange: ((Bool) -> Void)? = nil
 
     @State private var previousAttempt: PreviousAttempt?
 
@@ -29,27 +30,24 @@ struct ActiveExerciseCard: View {
             ) {
                 VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
                     HStack {
-                        VStack(alignment: .leading, spacing: DSSpacing.s4) {
-                            Text(section.name)
-                                .font(DSFont.body)
-                                .foregroundStyle(DSColor.textPrimary)
-                                .matchedGeometryEffect(id: "\(section.name)-title", in: namespace)
-                            if let goal = section.target?.goalSummary {
-                                Text("Ziel: \(goal)")
-                                    .font(DSFont.caption)
-                                    .foregroundStyle(DSColor.textSecondary)
-                            }
-                        }
+                        Text(section.name)
+                            .font(DSFont.body)
+                            .foregroundStyle(DSColor.textPrimary)
+                            .matchedGeometryEffect(id: "\(section.name)-title", in: namespace)
                         if isComplete {
                             DSIcon(name: "check", size: 16)
                                 .foregroundStyle(DSColor.accent)
                                 .accessibilityHidden(true)
                         }
                     }
-                    // Reiner Anzeigetext (Name + Ziel + Häkchen-Icon), keine
-                    // Controls - .combine reduziert das auf einen sinnvollen
+                    // Reiner Anzeigetext (Name + Häkchen-Icon), keine Controls
+                    // - .combine reduziert das auf einen sinnvollen
                     // VoiceOver-Stopp statt mehrerer Fragmente (siehe gleiche
-                    // Begründung in PreviousSessionComparisonCard).
+                    // Begründung in PreviousSessionComparisonCard). Das Ziel
+                    // (targetSets×targetReps) steht bewusst nicht mehr hier -
+                    // "Wdh. × Gewicht (kg)" im Spaltenkopf sagt bereits, was
+                    // eingetragen wird, eine zusätzliche Ziel-Zeile war
+                    // redundant.
                     .accessibilityElement(children: .combine)
                     .accessibilityValue(isComplete ? "vollständig abgehakt" : "")
 
@@ -64,28 +62,42 @@ struct ActiveExerciseCard: View {
                                 viewModel.updateSet(setLog, reps: reps, weightKg: weightKg)
                             },
                             onToggle: {
-                                viewModel.toggleSetCompletion(setLog)
-                                onSetToggled(setLog, section.name)
+                                // Beide Mutationen (isCompleted-Flip UND ggf. Auto-Advance
+                                // auf die nächste Übung) unter derselben expliziten
+                                // Transaktion, damit Farbwechsel und Akkordeon-Wechsel
+                                // dieselbe Kurve/Dauer teilen statt zu konkurrieren (siehe
+                                // Kommentar am entfernten .animation(value: isComplete)
+                                // weiter unten in dieser Datei).
+                                withAnimation(DSMotion.expand) {
+                                    viewModel.toggleSetCompletion(setLog)
+                                    onSetToggled(setLog, section.name)
+                                }
                             },
-                            focusedField: focusedField,
-                            isNextUp: setLog.persistentModelID == nextSetID
+                            isNextUp: setLog.persistentModelID == nextSetID,
+                            previousSet: previousAttempt?.sets.first(where: { $0.setIndex == setLog.setIndex }),
+                            onFieldFocusChange: onFieldFocusChange
                         )
                     }
 
-                    if let exercise = section.sets.first?.exercise {
+                    // `section.target?.exercise` als Fallback: eine mitten in der
+                    // Session zum Plan hinzugefügte Übung hat noch keine SetLogs
+                    // (die Vorbefüllung läuft nur einmalig beim Session-Start in
+                    // makeSession()) - ohne diesen Fallback gäbe es keinen UI-Weg,
+                    // je ihren ersten Satz anzulegen, weil section.sets.first dann
+                    // dauerhaft nil bleibt.
+                    if let exercise = section.sets.first?.exercise ?? section.target?.exercise {
                         DSButton(title: "Satz hinzufügen", variant: .outline, fullWidth: true) {
                             let last = section.sets.last
                             viewModel.addSet(
                                 for: exercise,
-                                suggestedReps: last?.reps,
-                                suggestedWeightKg: last?.weightKg
+                                suggestedReps: last?.reps ?? section.target?.targetReps,
+                                suggestedWeightKg: last?.weightKg ?? section.target?.targetWeightKg
                             )
                         }
                     }
                 }
             }
             .matchedGeometryEffect(id: section.name, in: namespace)
-            .animation(DSMotion.base, value: isComplete)
 
             if let previousAttempt {
                 PreviousSessionComparisonCard(attempt: previousAttempt)
@@ -104,7 +116,9 @@ struct ActiveExerciseCard: View {
             Text("Nr.").frame(minWidth: SetRowLayout.badge)
             Text("Wdh. × Gewicht (kg)")
                 .frame(maxWidth: .infinity, alignment: .center)
-            Color.clear.frame(width: SetRowLayout.toggle)
+            Text("Abschließen")
+                .frame(minWidth: SetRowLayout.toggle, alignment: .center)
+                .multilineTextAlignment(.center)
         }
         .font(DSFont.tableHeader)
         .foregroundStyle(DSColor.textTertiary)
