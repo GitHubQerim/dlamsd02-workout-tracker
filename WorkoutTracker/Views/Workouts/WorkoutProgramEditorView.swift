@@ -51,7 +51,11 @@ struct WorkoutProgramEditorView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
-                    .frame(minHeight: CGFloat(viewModel.drafts.count) * 72 + 16)
+                    // 96pt statt vormals 72pt/Zeile - `.reorderableRowStyle()`
+                    // fügt gegenüber der alten schlichten List-Zeile eigenes
+                    // Padding + das Handle-Icon hinzu; muss im Sync bleiben,
+                    // falls sich das Padding dort ändert.
+                    .frame(minHeight: CGFloat(viewModel.drafts.count) * 96 + 16)
 
                     DSButton(title: "Workout hinzufügen", icon: "dumbbell", variant: .outline, fullWidth: true) {
                         isPresentingWorkoutPicker = true
@@ -66,12 +70,8 @@ struct WorkoutProgramEditorView: View {
             }
             .navigationTitle(viewModel.isEditingExistingProgram ? "Plan bearbeiten" : "Neuer Plan")
             .toolbar {
-                ToolbarItemGroup(placement: .topBarLeading) {
-                    // Siehe Kommentar in WorkoutEditorView.swift - erhält die
-                    // Escape-Taste-Bindung auf iPad/Mac Catalyst.
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Abbrechen") { dismiss() }
-                        .keyboardShortcut(.cancelAction)
-                    EditButton()
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Speichern") {
@@ -93,18 +93,22 @@ struct WorkoutProgramEditorView: View {
 
     @ViewBuilder
     private func entryRow(_ draft: WorkoutProgramEditorViewModel.ProgramEntryDraft) -> some View {
-        VStack(alignment: .leading, spacing: DSSpacing.s8) {
-            TextField("Tag-Label", text: Binding(
-                get: { draft.dayLabel },
-                set: { viewModel.updateDayLabel(draftID: draft.id, label: $0) }
-            ))
-            .font(DSFont.body)
-            .foregroundStyle(DSColor.textPrimary)
+        HStack(spacing: DSSpacing.stackGap) {
+            VStack(alignment: .leading, spacing: DSSpacing.s8) {
+                TextField("Tag-Label", text: Binding(
+                    get: { draft.dayLabel },
+                    set: { viewModel.updateDayLabel(draftID: draft.id, label: $0) }
+                ))
+                .font(DSFont.body)
+                .foregroundStyle(DSColor.textPrimary)
 
-            Text(draft.workout.name)
-                .font(DSFont.caption)
-                .foregroundStyle(DSColor.textSecondary)
+                Text(draft.workout.name)
+                    .font(DSFont.caption)
+                    .foregroundStyle(DSColor.textSecondary)
+            }
+            Spacer()
+            DragHandleIcon()
         }
-        .listRowBackground(DSColor.surfaceCard)
+        .reorderableRowStyle()
     }
 }
