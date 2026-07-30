@@ -419,4 +419,16 @@ struct WorkoutSessionViewModelTests {
 
         #expect(viewModel.session.totalDistanceMeters == 5000)
     }
+
+    @Test func finishSessionPopulatesLastRankReconciliation() async throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .laufen, healthKitService: MockHealthKitService())
+        #expect(viewModel.lastRankReconciliation == nil)
+
+        await viewModel.finishSession()
+
+        #expect(viewModel.lastRankReconciliation != nil)
+    }
 }

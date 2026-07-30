@@ -322,4 +322,23 @@ struct ChallengeTests {
         let bars = ChallengeInsights.weeklyReviewBars(from: [], calendar: calendar, today: today)
         #expect(bars.count == 7)
     }
+
+    @Test func reconcileRankDecayOnAppearUpdatesRankStateAndReturnsWelcomeBackResult() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let calendar = Calendar.current
+        let today = Date()
+
+        let rankState = RankState.fetchOrCreate(in: context, calendar: calendar, today: today)
+        rankState.currentElo = 50
+        rankState.peakElo = 50
+        rankState.lastProcessedDay = calendar.date(byAdding: .day, value: -3, to: calendar.startOfDay(for: today))!
+        try context.save()
+
+        let viewModel = ChallengesViewModel(context: context)
+        let result = viewModel.reconcileRankDecayOnAppear(calendar: calendar, today: today)
+
+        #expect(result.daysDecayed == 2)
+        #expect(RankState.fetchOrCreate(in: context, calendar: calendar, today: today).currentElo == 40, "Ergebnis muss über den ViewModel-Aufruf hinweg persistiert sein")
+    }
 }

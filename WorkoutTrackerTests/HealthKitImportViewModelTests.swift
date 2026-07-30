@@ -94,4 +94,23 @@ struct HealthKitImportViewModelTests {
         viewModel.importSession(sample)
         #expect(viewModel.importableWorkouts.isEmpty)
     }
+
+    @Test func importSessionUpdatesRankProgress() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let sample = HealthKitWorkoutSample(
+            id: UUID(),
+            hkActivityType: .running,
+            start: Date(timeIntervalSinceNow: -1800),
+            end: .now,
+            totalDistanceMeters: 4000,
+            averageHeartRate: nil
+        )
+
+        let viewModel = HealthKitImportViewModel(context: context, healthKitService: MockHealthKitService())
+        viewModel.importSession(sample)
+
+        let rankState = RankState.fetchOrCreate(in: context)
+        #expect(rankState.currentElo == 16, "Importierte Sessions müssen genauso wie lokal beendete den Rang-Fortschritt aktualisieren (15 Basis + 1 Streak-Tag)")
+    }
 }
