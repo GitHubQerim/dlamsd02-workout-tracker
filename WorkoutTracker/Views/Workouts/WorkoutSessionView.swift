@@ -18,7 +18,7 @@ struct WorkoutSessionView: View {
 
     @State private var isPresentingExercisePicker = false
     @State private var isPresentingFinishDialog = false
-    @State private var isPresentingFeedback = false
+    @State private var isPresentingCompletion = false
     @State private var expandedExerciseName: String?
     /// Solange ein `SetValueField` fokussiert ist, sitzt dessen Tastatur-
     /// Toolbar (Quick-Adjust-Buttons) im selben Bereich wie die permanente
@@ -96,8 +96,8 @@ struct WorkoutSessionView: View {
                     viewModel.addSet(for: exercise)
                 }
             }
-            .sheet(isPresented: $isPresentingFeedback, onDismiss: { dismiss() }) {
-                WorkoutFeedbackView(viewModel: viewModel)
+            .sheet(isPresented: $isPresentingCompletion, onDismiss: { dismiss() }) {
+                WorkoutCompletionView(viewModel: viewModel)
             }
             .fullScreenCover(item: restTimerBinding) { presentation in
                 RestTimerView(
@@ -112,7 +112,7 @@ struct WorkoutSessionView: View {
                 Button("Speichern & beenden") {
                     Task {
                         await viewModel.finishSession()
-                        isPresentingFeedback = true
+                        isPresentingCompletion = true
                     }
                 }
                 Button("Verwerfen", role: .destructive) {
