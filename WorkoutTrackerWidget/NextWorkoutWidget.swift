@@ -7,10 +7,12 @@ struct NextWorkoutEntry: TimelineEntry {
     let heatmapDays: [DayCount]
 }
 
-/// `.never`-Reload-Policy: die Timeline aktualisiert sich nicht periodisch,
-/// sondern nur wenn die App explizit `WidgetCenter.reloadTimelines(ofKind:)`
-/// aufruft (`WidgetSnapshotRefresher`) - der Snapshot wird nie "von selbst"
-/// veraltet nachgeladen, sondern nur bei tatsächlich relevanten Änderungen.
+/// Die "nächstes Workout"-Info selbst ändert sich nur bei App-Start/Session-
+/// Ende (`WidgetSnapshotRefresher` ruft danach `WidgetCenter.reloadAllTimelines()`),
+/// die Mini-Heatmap teilt sich aber denselben `HeatmapSnapshot` wie
+/// `HeatmapWidget` - deshalb hier dieselbe `.after(nextMidnight)`-Policy statt
+/// `.never`, sonst hinkt die Mini-Heatmap nach einem App-losen Tag genauso
+/// hinterher (siehe `DayCount.extendedToToday()`).
 struct NextWorkoutTimelineProvider: TimelineProvider {
     func placeholder(in context: Context) -> NextWorkoutEntry {
         NextWorkoutEntry(
@@ -25,13 +27,18 @@ struct NextWorkoutTimelineProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<NextWorkoutEntry>) -> Void) {
-        completion(Timeline(entries: [currentEntry()], policy: .never))
+        completion(Timeline(entries: [currentEntry()], policy: .after(Self.nextRefreshDate())))
     }
 
     private func currentEntry() -> NextWorkoutEntry {
         let snapshot = WidgetSnapshotStore.read(NextWorkoutSnapshot.self, filename: NextWorkoutSnapshot.filename)
         let heatmap = WidgetSnapshotStore.read(HeatmapSnapshot.self, filename: HeatmapSnapshot.filename)
-        return NextWorkoutEntry(date: .now, snapshot: snapshot, heatmapDays: heatmap?.days ?? [])
+        return NextWorkoutEntry(date: .now, snapshot: snapshot, heatmapDays: (heatmap?.days ?? []).extendedToToday())
+    }
+
+    private static func nextRefreshDate(calendar: Calendar = .current) -> Date {
+        calendar.nextDate(after: .now, matching: DateComponents(hour: 0, minute: 5), matchingPolicy: .nextTime)
+            ?? Date.now.addingTimeInterval(86_400)
     }
 }
 
