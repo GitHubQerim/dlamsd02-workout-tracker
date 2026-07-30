@@ -1,14 +1,4 @@
 import SwiftUI
-import SwiftData
-
-/// Eindeutiges Feld für die geteilte Tastatur-Toolbar in `WorkoutSessionView`
-/// (ein `@FocusState` pro Bildschirm statt pro Zeile - sonst würden mehrere
-/// gleichzeitig existierende `SetRow`s in der Liste jeweils eigene
-/// `.toolbar(.keyboard)`-Inhalte registrieren).
-enum SetRowField: Hashable {
-    case reps(PersistentIdentifier)
-    case weight(PersistentIdentifier)
-}
 
 /// Geteilte Spaltenbreiten zwischen `SetRow` und dem Spalten-Header in
 /// `ActiveExerciseCard` - eine Quelle der Wahrheit, damit Header und Zeilen
@@ -21,22 +11,28 @@ enum SetRowLayout {
 }
 
 /// Eine Satz-Zeile in der aktiven Übungskarte: Set-Nummer-Badge (bleibt beim
-/// Abhaken unverändert sichtbar), direkt antippbare Reps-/Gewicht-Felder
-/// (kein Stepper - das war der explizite Auslöser des Nutzer-Feedbacks: kleine
-/// +/- Buttons sind während eines laufenden Workouts umständlich) und ein
-/// großer Checkmark-Toggle. Bewusst KEIN `.accessibilityElement(children:
-/// .combine)` auf die ganze Zeile - das hätte Button und Felder zu einem
-/// einzigen, nicht bedienbaren VoiceOver-Element verschmolzen (siehe
-/// docs/journal.md, bereits einmal als echte Regression gefunden).
+/// Abhaken unverändert sichtbar), Reps-/Gewicht-Felder die als inline
+/// tap-to-edit-Zahlenfelder mit Quick-Adjust-Tastatur-Toolbar funktionieren
+/// (siehe SetValueField - abgelöst den vorherigen Wheel-Picker-Sheet-Ansatz)
+/// und ein großer Checkmark-Toggle. Bewusst KEIN
+/// `.accessibilityElement(children: .combine)` auf die ganze Zeile - das
+/// hätte Button und Felder zu einem einzigen, nicht bedienbaren
+/// VoiceOver-Element verschmolzen (siehe docs/journal.md, bereits einmal als
+/// echte Regression gefunden).
 struct SetRow: View {
     let setLog: SetLog
     let onUpdate: (_ reps: Int, _ weightKg: Double) -> Void
     let onToggle: () -> Void
-    var focusedField: FocusState<SetRowField?>.Binding
     /// Markiert den nächsten offenen Satz einer Übung, damit der Blick beim
     /// Weiterarbeiten nicht die ganze Liste absuchen muss. Default `false`
     /// hält bestehende Aufrufer/Previews unverändert lauffähig.
     var isNextUp: Bool = false
+    /// Snapshot des gleichnamigen Satzes aus der letzten abgeschlossenen
+    /// Session - Placeholder-Quelle für leere Felder. Default `nil` hält
+    /// bestehende Previews/Aufrufer lauffähig.
+    var previousSet: PreviousSetSnapshot? = nil
+    /// Durchgereicht an beide `SetValueField`s, siehe deren Doc-Kommentar.
+    var onFieldFocusChange: ((Bool) -> Void)? = nil
 
     var body: some View {
         HStack(spacing: DSSpacing.stackGap) {
@@ -49,29 +45,29 @@ struct SetRow: View {
                 .accessibilityHidden(true)
 
             HStack(spacing: DSSpacing.s8) {
-                TextField("Wdh.", value: Binding(
-                    get: { setLog.reps },
-                    set: { onUpdate($0, setLog.weightKg) }
-                ), format: .number)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.center)
+                SetValueField(
+                    kind: .reps,
+                    value: Double(setLog.reps),
+                    placeholder: previousSet.map { Double($0.reps) },
+                    accessibilityLabel: "Wiederholungen, Satz \(setLog.setIndex + 1)",
+                    onCommit: { onUpdate(Int($0.rounded()), setLog.weightKg) },
+                    onFocusChange: onFieldFocusChange
+                )
                 .frame(minWidth: SetRowLayout.repsMin)
-                .focused(focusedField, equals: .reps(setLog.persistentModelID))
-                .accessibilityLabel("Wiederholungen, Satz \(setLog.setIndex + 1)")
 
                 Text("×")
                     .foregroundStyle(DSColor.textTertiary)
                     .accessibilityHidden(true)
 
-                TextField("kg", value: Binding(
-                    get: { setLog.weightKg },
-                    set: { onUpdate(setLog.reps, $0) }
-                ), format: .number.precision(.fractionLength(0...1)))
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.center)
+                SetValueField(
+                    kind: .weightKg,
+                    value: setLog.weightKg,
+                    placeholder: previousSet?.weightKg,
+                    accessibilityLabel: "Gewicht in Kilogramm, Satz \(setLog.setIndex + 1)",
+                    onCommit: { onUpdate(setLog.reps, $0) },
+                    onFocusChange: onFieldFocusChange
+                )
                 .frame(minWidth: SetRowLayout.weightMin)
-                .focused(focusedField, equals: .weight(setLog.persistentModelID))
-                .accessibilityLabel("Gewicht in Kilogramm, Satz \(setLog.setIndex + 1)")
             }
             .font(DSFont.body)
             .foregroundStyle(setLog.isCompleted ? DSColor.textSecondary : DSColor.textPrimary)
