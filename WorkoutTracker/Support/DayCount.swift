@@ -25,3 +25,24 @@ extension DayCount {
         }
     }
 }
+
+extension Array where Element == DayCount {
+    /// Verlängert eine vom Hauptapp-Prozess geschriebene Tages-Reihe bis zum
+    /// tatsächlichen "heute" - der Widget-Snapshot wird nur bei App-Start/
+    /// Session-Ende neu geschrieben (`WidgetSnapshotRefresher`), ohne das
+    /// würde die Widget-Heatmap nach Mitternacht einen Tag hinter der Zeit
+    /// hängen bleiben, bis die App das nächste Mal geöffnet wird. Fehlende
+    /// Tage werden mit `count: 0` aufgefüllt (korrekt: kein Training an
+    /// diesen Tagen bekannt).
+    func extendedToToday(calendar: Calendar = .current, today: Date = .now) -> [DayCount] {
+        guard var lastDate = last?.date else { return self }
+        let todayStart = calendar.startOfDay(for: today)
+        var result = self
+        while lastDate < todayStart {
+            guard let next = calendar.date(byAdding: .day, value: 1, to: lastDate) else { break }
+            result.append(DayCount(date: next, count: 0))
+            lastDate = next
+        }
+        return result
+    }
+}
