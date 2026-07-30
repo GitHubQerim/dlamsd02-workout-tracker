@@ -108,6 +108,11 @@ HealthKit-Sessions (`HealthKitImportViewModel.importSession`) riefen
 Session-Historie lebt) zeigte dadurch einen aktiven Tag, während Rang/Elo
 nichts davon wussten.
 
+## Bekannte v1-Lücken (nicht in diesem PR behoben, bewusst zurückgestellt)
+
+- **Zeitbasierte Bodyweight-Übungen** (z.B. Planks): Der Überlastungs-Bonus rechnet nur `reps × weightKg` (`ChallengeInsights.volumeByExercise`) - eine gehaltene Übung ohne Zusatzgewicht trägt praktisch nichts bei, unabhängig von der Dauer, da `SetLog` kein Dauer-Feld hat.
+- **Kein Anti-Cheat/Plausibilitäts-Check für Session-Dauer.** Aktuell fließt die tatsächliche Trainingsdauer NICHT in die Elo-Formel ein - weder als Bonus noch als Plausibilitätsprüfung (z.B. "8 Übungen in 2:38 ist physisch unplausibel"). Das ist für v1 unkritisch, weil der Elo-Wert rein lokal ist und niemand außer einem selbst betrogen werden kann. **Sobald ein Social-/Vergleichs-Feature kommt (siehe [[dlamsd02-future-social-apple-first]]), MUSS das nachgezogen werden** - sonst kann sich jemand durch frei erfundene oder stark übertriebene Session-Daten (z.B. eine "10h Radtour" an einem entspannten Sonntag) unverdient hochranken, ohne dass ein Vergleich mit anderen noch aussagekräftig wäre. Eine reine Dauer-Belohnung wäre dabei genauso falsch wie eine reine Dauer-Plausibilitätsprüfung ohne Deckel - beides muss zusammen gedacht werden (gedeckelter Dauer-Bonus UND ein oberer Anschlag, der verhindert, dass sehr lange, wenig anstrengende Sessions unverhältnismäßig viel Elo bringen).
+
 ## Konsequenzen
 - Positiv: reine, testbare Kernlogik ohne `ModelContext` (`RankEngine`); kein
   Background-Job; Decay-Nachholung ist O(1) arithmetisch statt O(Tage)
