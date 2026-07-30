@@ -149,4 +149,26 @@ struct WorkoutEditorViewModelTests {
         #expect(viewModel.drafts.count == 1)
         #expect(viewModel.validationMessage != nil)
     }
+
+    /// Regression für den Session-Start-Bug: ohne jede weitere Interaktion nach
+    /// addExercise() muss save() bereits die UI-Defaults (3 Sätze / 10 Wdh.)
+    /// persistieren, nicht `nil` - genau der Pfad, den die Tests bisher nicht
+    /// abdeckten (siehe Kommentar in addExercise()).
+    @Test func addExerciseWithoutInteractionPersistsUIDefaults() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Bankdrücken")
+        context.insert(exercise)
+
+        let viewModel = WorkoutEditorViewModel(context: context)
+        viewModel.updateName("Testplan")
+        viewModel.addExercise(exercise)
+
+        let saved = viewModel.save()
+
+        #expect(saved == true)
+        let persisted = try #require(try context.fetch(FetchDescriptor<PlannedExercise>()).first)
+        #expect(persisted.targetSets == 3)
+        #expect(persisted.targetReps == 10)
+    }
 }
