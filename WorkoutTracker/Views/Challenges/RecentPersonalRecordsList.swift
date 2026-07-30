@@ -16,15 +16,7 @@ struct RecentPersonalRecordsList: View {
                         .foregroundStyle(DSColor.textTertiary)
                 } else {
                     ForEach(records) { record in
-                        HStack {
-                            Text(record.exerciseName)
-                                .font(DSFont.body)
-                                .foregroundStyle(DSColor.textPrimary)
-                            Spacer()
-                            Text("\(record.weightKg.formatted(.number.precision(.fractionLength(0...1)))) kg")
-                                .font(DSFont.caption)
-                                .foregroundStyle(DSColor.accent)
-                        }
+                        PersonalRecordRow(record: record)
                     }
                 }
             }
