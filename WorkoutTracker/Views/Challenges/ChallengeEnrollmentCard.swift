@@ -6,12 +6,7 @@ struct ChallengeEnrollmentCard: View {
     let onLeave: () -> Void
 
     private var progress: Int {
-        switch challenge.challengeType {
-        case .streakTage:
-            ChallengeInsights.currentStreakDays(entries: challenge.progressEntries)
-        case .frequenzProWoche:
-            ChallengeInsights.weeklyProgress(entries: challenge.progressEntries)
-        }
+        ChallengeInsights.currentProgress(for: challenge)
     }
 
     var body: some View {
