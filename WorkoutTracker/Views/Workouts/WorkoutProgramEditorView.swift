@@ -8,6 +8,7 @@ struct WorkoutProgramEditorView: View {
 
     @State private var viewModel: WorkoutProgramEditorViewModel
     @State private var isPresentingWorkoutPicker = false
+    @State private var pendingEntryDeletion: UUID?
 
     init(context: ModelContext, editing program: WorkoutProgram? = nil) {
         _viewModel = State(initialValue: WorkoutProgramEditorViewModel(context: context, editing: program))
@@ -42,7 +43,7 @@ struct WorkoutProgramEditorView: View {
                             entryRow(draft)
                         }
                         .onDelete { offsets in
-                            offsets.forEach { viewModel.removeDraft(id: viewModel.drafts[$0].id) }
+                            pendingEntryDeletion = offsets.first.map { viewModel.drafts[$0].id }
                         }
                         .onMove { source, destination in
                             viewModel.moveDrafts(from: source, to: destination)
@@ -50,7 +51,11 @@ struct WorkoutProgramEditorView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
-                    .frame(minHeight: CGFloat(viewModel.drafts.count) * 72 + 16)
+                    // 96pt statt vormals 72pt/Zeile - `.reorderableRowStyle()`
+                    // fügt gegenüber der alten schlichten List-Zeile eigenes
+                    // Padding + das Handle-Icon hinzu; muss im Sync bleiben,
+                    // falls sich das Padding dort ändert.
+                    .frame(minHeight: CGFloat(viewModel.drafts.count) * 96 + 16)
 
                     DSButton(title: "Workout hinzufügen", icon: "dumbbell", variant: .outline, fullWidth: true) {
                         isPresentingWorkoutPicker = true
@@ -80,23 +85,30 @@ struct WorkoutProgramEditorView: View {
                     viewModel.addEntry(workout: workout)
                 }
             }
+            .confirmRemoval(title: "Tag entfernen?", pendingID: $pendingEntryDeletion) { id in
+                viewModel.removeDraft(id: id)
+            }
         }
     }
 
     @ViewBuilder
     private func entryRow(_ draft: WorkoutProgramEditorViewModel.ProgramEntryDraft) -> some View {
-        VStack(alignment: .leading, spacing: DSSpacing.s8) {
-            TextField("Tag-Label", text: Binding(
-                get: { draft.dayLabel },
-                set: { viewModel.updateDayLabel(draftID: draft.id, label: $0) }
-            ))
-            .font(DSFont.body)
-            .foregroundStyle(DSColor.textPrimary)
+        HStack(spacing: DSSpacing.stackGap) {
+            VStack(alignment: .leading, spacing: DSSpacing.s8) {
+                TextField("Tag-Label", text: Binding(
+                    get: { draft.dayLabel },
+                    set: { viewModel.updateDayLabel(draftID: draft.id, label: $0) }
+                ))
+                .font(DSFont.body)
+                .foregroundStyle(DSColor.textPrimary)
 
-            Text(draft.workout.name)
-                .font(DSFont.caption)
-                .foregroundStyle(DSColor.textSecondary)
+                Text(draft.workout.name)
+                    .font(DSFont.caption)
+                    .foregroundStyle(DSColor.textSecondary)
+            }
+            Spacer()
+            DragHandleIcon()
         }
-        .listRowBackground(DSColor.surfaceCard)
+        .reorderableRowStyle()
     }
 }

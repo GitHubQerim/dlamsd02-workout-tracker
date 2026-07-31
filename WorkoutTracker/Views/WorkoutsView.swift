@@ -46,7 +46,10 @@ struct WorkoutsView: View {
                 }
 
                 if selectedTab == .plans {
-                    DSButton(title: "Plan erstellen", icon: "calendar", fullWidth: true) {
+                    // "calendar" existiert nicht als Asset im Catalog - bis
+                    // ein eigenes Kalender-Icon ergänzt wird, "chart-column"
+                    // als nächstliegender Stand-in (Struktur/Plan-Symbolik).
+                    DSButton(title: "Plan erstellen", icon: "chart-column", fullWidth: true) {
                         isPresentingNewProgram = true
                     }
                     .disabled(hasOpenSession)
