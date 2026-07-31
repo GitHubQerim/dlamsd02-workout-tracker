@@ -52,9 +52,14 @@ struct ChallengesView: View {
                         VStack(spacing: DSSpacing.cardGap) {
                             ForEach(enrolledChallenges) { challenge in
                                 if let enrollment = challenge.enrollments.first {
-                                    ChallengeEnrollmentCard(challenge: challenge) {
-                                        viewModel?.leave(enrollment)
+                                    NavigationLink {
+                                        ChallengeDetailView(challenge: challenge)
+                                    } label: {
+                                        ChallengeEnrollmentCard(challenge: challenge) {
+                                            viewModel?.leave(enrollment)
+                                        }
                                     }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }

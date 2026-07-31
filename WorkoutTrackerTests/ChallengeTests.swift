@@ -168,6 +168,47 @@ struct ChallengeTests {
         #expect(progress == 1)
     }
 
+    @Test func currentProgressReturnsStreakDaysForStreakChallenge() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let calendar = Calendar.current
+        let today = Date()
+        let challenge = Challenge(name: "Streak", challengeType: .streakTage, targetValue: 7)
+        context.insert(challenge)
+        context.insert(ChallengeEnrollment(challenge: challenge))
+        let session = WorkoutSession(activityType: .kraft, startDate: today, endDate: today)
+        context.insert(session)
+        try context.save()
+        session.materializeChallengeProgress(in: context)
+        try context.save()
+
+        let progress = ChallengeInsights.currentProgress(for: challenge, calendar: calendar, today: today)
+
+        #expect(progress == 1)
+    }
+
+    @Test func currentProgressReturnsWeeklyCountForFrequencyChallenge() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let calendar = Calendar.current
+        let today = Date()
+        let challenge = Challenge(name: "Frequenz", challengeType: .frequenzProWoche, targetValue: 3)
+        context.insert(challenge)
+        context.insert(ChallengeEnrollment(challenge: challenge))
+        let sessionA = WorkoutSession(activityType: .kraft, startDate: today, endDate: today)
+        let sessionB = WorkoutSession(activityType: .laufen, startDate: today, endDate: today)
+        context.insert(sessionA)
+        context.insert(sessionB)
+        try context.save()
+        sessionA.materializeChallengeProgress(in: context)
+        sessionB.materializeChallengeProgress(in: context)
+        try context.save()
+
+        let progress = ChallengeInsights.currentProgress(for: challenge, calendar: calendar, today: today)
+
+        #expect(progress == 2)
+    }
+
     @Test func personalRecordCreatedOnFirstLift() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
