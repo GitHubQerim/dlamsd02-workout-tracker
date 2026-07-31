@@ -30,6 +30,31 @@ struct WorkoutEditorViewModelTests {
         #expect(viewModel.drafts.map(\.exercise.name) == ["A", "B"])
     }
 
+    /// Regression: ein Plan, dessen `PlannedExercise` (z.B. aus einer Zeit
+    /// vor diesem Fix) `targetSets`/`targetReps` als `nil` trägt, muss beim
+    /// Laden echte Default-Werte im Draft bekommen - sonst zeigt der Editor
+    /// nur kosmetische Fallback-Zahlen an, die beim Speichern ohne
+    /// Nutzerinteraktion erneut als `nil` persistieren ("0×0" auf
+    /// `WorkoutDetailView`).
+    @Test func loadingExistingPlanBackfillsNilTargetsToDefaults() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
+        context.insert(plan)
+        let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise, targetSets: nil, targetReps: nil)
+        plannedExercise.plan = plan
+        context.insert(plannedExercise)
+        try context.save()
+
+        let viewModel = WorkoutEditorViewModel(context: context, editing: plan)
+
+        #expect(viewModel.drafts.first?.targetSets == WorkoutEditorViewModel.defaultTargetSets)
+        #expect(viewModel.drafts.first?.targetReps == WorkoutEditorViewModel.defaultTargetReps)
+    }
+
     /// Blocker-Fund aus dem architecture-reviewer-Pass (ADR 0009): Kraft und
     /// Cardio nutzen getrennte Listen (`drafts`/`segmentDrafts`) statt
     /// geteilter nilable Felder - `save()` muss deshalb bei jedem Speichern

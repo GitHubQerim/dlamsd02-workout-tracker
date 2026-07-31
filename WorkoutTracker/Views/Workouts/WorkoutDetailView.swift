@@ -29,7 +29,7 @@ struct WorkoutDetailView: View {
                                         .font(DSFont.body)
                                         .foregroundStyle(DSColor.textPrimary)
                                     Spacer()
-                                    Text("\(plannedExercise.targetSets ?? 0) × \(plannedExercise.targetReps ?? 0)")
+                                    Text("\(plannedExercise.targetSets ?? WorkoutEditorViewModel.defaultTargetSets) × \(plannedExercise.targetReps ?? WorkoutEditorViewModel.defaultTargetReps)")
                                         .font(DSFont.caption)
                                         .foregroundStyle(DSColor.textSecondary)
                                 }

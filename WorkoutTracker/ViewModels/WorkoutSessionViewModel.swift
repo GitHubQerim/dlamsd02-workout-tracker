@@ -115,12 +115,19 @@ final class WorkoutSessionViewModel: Identifiable {
         if activityType.usesSetLogs {
             for plannedExercise in plan.plannedExercises.sorted(by: { $0.orderIndex < $1.orderIndex }) {
                 guard let exercise = plannedExercise.exercise else { continue }
-                let setCount = max(1, plannedExercise.targetSets ?? 1)
+                // Dieselben Defaults wie WorkoutEditorViewModel (Editor-
+                // Anzeige UND -Persistierung) - sonst würde ein Plan mit
+                // noch nicht zurückgeschriebenen `nil`-Zielwerten (siehe
+                // WorkoutEditorViewModel-Backfill-Kommentar) beim Anzeigen
+                // "3 × 10" zeigen, aber beim Sessionstart nur 1 Satz mit
+                // 0 Wdh. anlegen - stiller Widerspruch zwischen Anzeige und
+                // tatsächlichem Verhalten.
+                let setCount = max(1, plannedExercise.targetSets ?? WorkoutEditorViewModel.defaultTargetSets)
                 for setIndex in 0..<setCount {
                     let setLog = SetLog(
                         setIndex: setIndex,
                         exercise: exercise,
-                        reps: plannedExercise.targetReps ?? 0,
+                        reps: plannedExercise.targetReps ?? WorkoutEditorViewModel.defaultTargetReps,
                         weightKg: plannedExercise.targetWeightKg ?? 0
                     )
                     setLog.session = session

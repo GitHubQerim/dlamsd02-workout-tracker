@@ -4,6 +4,7 @@ import SwiftUI
 /// kein Onboarding-Zwang beim App-Start, sondern ein dauerhaft auffindbarer
 /// Screen, den der Nutzer aufsucht, wenn er die Verbindung herstellen will.
 struct SettingsView: View {
+    @Environment(\.modelContext) private var modelContext
     @State private var viewModel = SettingsViewModel()
 
     var body: some View {
@@ -54,6 +55,22 @@ struct SettingsView: View {
                     }
                 }
                 .buttonStyle(.plain)
+
+                #if DEBUG
+                // Nur für Debug-Builds: einmaliger, manueller Import des
+                // persönlichen Push/Pull/Legs-Splits des Nutzers (keine
+                // generischen Starter-Daten, siehe PersonalPlanSeeder).
+                DSCard {
+                    VStack(alignment: .leading, spacing: DSSpacing.s8) {
+                        Text("Debug")
+                            .font(DSFont.label)
+                            .foregroundStyle(DSColor.textSecondary)
+                        DSButton(title: "Testdaten importieren", variant: .outline, fullWidth: true) {
+                            PersonalPlanSeeder.seed(in: modelContext)
+                        }
+                    }
+                }
+                #endif
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
