@@ -1,24 +1,28 @@
 import Foundation
 import SwiftData
 
-/// Importiert den persönlichen 6-Tage-Push/Pull/Legs-Split des Nutzers
-/// einmalig - bewusst NICHT wie `ExerciseSeeder`/`ChallengeSeeder`
+/// Importiert die 6 Workouts des persönlichen Push/Pull/Legs-Splits des
+/// Nutzers einmalig - bewusst NICHT wie `ExerciseSeeder`/`ChallengeSeeder`
 /// automatisch beim App-Start (das wären generische Starter-Kataloge für
 /// jede Installation), sondern manuell über den Debug-Button in
 /// `SettingsView` ausgelöst. Idempotent über einen Namens-Check statt eines
 /// globalen `UserDefaults`-Flags, da es sich um eine bewusste, einmalige
 /// Nutzeraktion handelt statt eines automatischen Erst-Start-Vorgangs.
 ///
+/// Legt bewusst KEIN `WorkoutProgram` an - der Nutzer stellt sich die
+/// Tages-Reihenfolge selbst in der App zusammen, der Seeder liefert nur die
+/// Bausteine.
+///
 /// Persönlicher Debug-Komfort, kein generalisiertes Feature: gehört nicht
 /// zum bewerteten DLAMSD02-Projektbericht-Umfang (siehe Projekt-Memory) und
 /// ist bewusst `#if DEBUG`-only, damit es nie in einem Release-Build landet.
 enum PersonalPlanSeeder {
-    private static let programName = "Push Pull Legs"
+    private static let firstWorkoutName = "Push A - schwer"
 
     @MainActor
     static func seed(in context: ModelContext) {
-        let name = Self.programName
-        let alreadySeeded = (try? context.fetchCount(FetchDescriptor<WorkoutProgram>(
+        let name = Self.firstWorkoutName
+        let alreadySeeded = (try? context.fetchCount(FetchDescriptor<Workout>(
             predicate: #Predicate { $0.name == name }
         ))) ?? 0
         guard alreadySeeded == 0 else { return }
@@ -81,7 +85,7 @@ enum PersonalPlanSeeder {
             ("Tibialis-Raises", .beine, 3, 15),
         ]
 
-        let pushA = makeWorkout("Push A", [
+        _ = makeWorkout("Push A - schwer", [
             ("Bankdrücken (LH)", .brust, 4, 6),
             ("Schrägbank KH", .brust, 3, 8),
             ("Schulterdrücken (KH)", .schultern, 3, 8),
@@ -90,7 +94,7 @@ enum PersonalPlanSeeder {
             ("Overhead Extension", .arme, 3, 12),
         ])
 
-        let pushB = makeWorkout("Push B", [
+        _ = makeWorkout("Push B - Pump", [
             ("KH-Bankdrücken", .brust, 3, 10),
             ("Brustpresse / Butterfly", .brust, 3, 12),
             ("Arnold Press", .schultern, 3, 10),
@@ -99,7 +103,7 @@ enum PersonalPlanSeeder {
             ("Trizeps Kickbacks", .arme, 3, 12),
         ])
 
-        let pullA = makeWorkout("Pull A", [
+        _ = makeWorkout("Pull A - schwer", [
             ("Klimmzüge / Lat Pulldown", .ruecken, 4, 6),
             ("Rudern Langhantel", .ruecken, 4, 8),
             ("Einarm-KH-Rudern", .ruecken, 3, 10),
@@ -108,7 +112,7 @@ enum PersonalPlanSeeder {
             ("Hammer Curls", .arme, 3, 12),
         ])
 
-        let pullB = makeWorkout("Pull B", [
+        _ = makeWorkout("Pull B - Pump", [
             ("Lat Pulldown (eng/neutral)", .ruecken, 3, 10),
             ("Kabelrudern sitzend", .ruecken, 3, 10),
             ("Reverse Flys / Rear Delt", .ruecken, 3, 15),
@@ -117,28 +121,20 @@ enum PersonalPlanSeeder {
             ("Kabel-Curls", .arme, 3, 12),
         ])
 
-        let legsA = makeWorkout("Legs A", [
+        _ = makeWorkout("Legs A - schwer", [
             ("Kniebeugen (LH)", .beine, 4, 6),
             ("Rumänisches Kreuzheben", .beine, 3, 8),
             ("Beinpresse", .beine, 3, 10),
             ("Ausfallschritte (KH)", .beine, 3, 10),
         ] + calfBlock)
 
-        let legsB = makeWorkout("Legs B", [
+        _ = makeWorkout("Legs B - leicht", [
             ("Hip Thrust", .beine, 4, 10),
             ("Beinpresse (hoch)", .beine, 3, 15),
             ("Leg Curls", .beine, 3, 12),
             ("Bulgarian Split Squats", .beine, 3, 10),
             ("Leg Extensions", .beine, 3, 15),
         ] + calfBlock)
-
-        let program = WorkoutProgram(name: Self.programName)
-        context.insert(program)
-        for (index, workout) in [pushA, pullA, legsA, pushB, pullB, legsB].enumerated() {
-            let entry = WorkoutProgramEntry(orderIndex: index, dayLabel: "Day \(index + 1)", workout: workout)
-            entry.program = program
-            context.insert(entry)
-        }
 
         do {
             try context.save()
