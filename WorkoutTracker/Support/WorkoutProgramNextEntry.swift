@@ -1,5 +1,4 @@
 import Foundation
-import SwiftData
 
 extension WorkoutProgram {
     /// Welcher Tag als Nächstes dran ist: der auf den zuletzt abgeschlossenen
@@ -12,22 +11,28 @@ extension WorkoutProgram {
     /// verfälschen. Wurde der zuletzt gemachte Tag inzwischen aus dem
     /// Programm entfernt, degradiert die Auflösung auf den ersten Eintrag
     /// statt abzustürzen oder nichts anzuzeigen.
-    func nextEntry(in context: ModelContext) -> WorkoutProgramEntry? {
+    ///
+    /// Nimmt bewusst ein bereits geladenes `[WorkoutSession]`-Array statt
+    /// selbst per `context.fetch(...)` zu laden: ein imperativer Fetch aus
+    /// einem SwiftUI-`body`-Aufrufpfad heraus (dieser Typ wird u.a. aus
+    /// `WorkoutProgramDetailView.body` gelesen) geriet mit SwiftData's
+    /// Change-Tracking in eine Endlosschleife - `body` wertete sich dadurch
+    /// unbegrenzt neu aus (100% CPU, App hängt beim Öffnen eines Tages).
+    /// Aufrufer liefern die Sessions über ein eigenes `@Query`, das SwiftUI
+    /// korrekt beobachtet.
+    func nextEntry(among candidateSessions: [WorkoutSession]) -> WorkoutProgramEntry? {
         let orderedEntries = entries.sorted { $0.orderIndex < $1.orderIndex }
         guard !orderedEntries.isEmpty else { return nil }
 
         let entryIDs = Set(orderedEntries.map(\.id))
-        let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate { $0.endDate != nil && $0.programEntryID != nil },
-            sortBy: [SortDescriptor(\.startDate, order: .reverse)]
-        )
-        guard let recentSessions = try? context.fetch(descriptor) else { return orderedEntries.first }
+        let recentSessions = candidateSessions
+            .filter { $0.endDate != nil && $0.programEntryID != nil }
+            .sorted { $0.startDate > $1.startDate }
 
-        // Kein Force-Unwrap auf `programEntryID!`: das vorherige Fetch-
-        // Predicate kombiniert zwei Optional-nil-Checks mit `&&`, was in
-        // diesem SwiftData-Setup nicht immer zuverlässig durchgesetzt wird
-        // (ADR 0001) - ein sicheres Un-wrap hier behebt das Risiko
-        // unabhängig davon, ob das Predicate tatsächlich der Auslöser ist.
+        // Kein Force-Unwrap auf `programEntryID!`: siehe ADR 0001 zu
+        // fragilen Compound-Optional-Predicates in diesem SwiftData-Setup -
+        // ein sicheres Un-wrap hier behebt das Risiko unabhängig davon, ob
+        // das ursprüngliche Predicate tatsächlich der Auslöser war.
         guard
             let lastEntryID = recentSessions.first(where: { session in
                 guard let entryID = session.programEntryID else { return false }
