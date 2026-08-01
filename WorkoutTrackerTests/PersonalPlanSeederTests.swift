@@ -34,6 +34,23 @@ struct PersonalPlanSeederTests {
         #expect(workouts.count == 6, "Zweiter Aufruf darf die Workouts nicht erneut anlegen")
     }
 
+    @Test func seedStaysIdempotentAfterUserRenamesOneSeededWorkout() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        PersonalPlanSeeder.seed(in: context)
+        let pushA = try #require(try context.fetch(FetchDescriptor<Workout>(
+            predicate: #Predicate { $0.name == "Push A - schwer" }
+        )).first)
+        pushA.name = "Montag"
+        try context.save()
+
+        PersonalPlanSeeder.seed(in: context)
+
+        let workouts = try context.fetch(FetchDescriptor<Workout>())
+        #expect(workouts.count == 6, "Umbenennen eines einzelnen Workouts darf die anderen fünf nicht duplizieren")
+    }
+
     @Test func seedReusesExistingExerciseByExactName() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
