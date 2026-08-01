@@ -34,11 +34,7 @@ struct WorkoutsView: View {
         }
     }
 
-    private var visiblePrograms: [WorkoutProgram] {
-        isShowingAllPrograms ? programs : Array(programs.prefix(Self.collapsedItemLimit))
-    }
-
-    private func visibleItems(_ items: [Workout], isExpanded: Bool) -> [Workout] {
+    private func visible<Item>(_ items: [Item], isExpanded: Bool) -> [Item] {
         isExpanded ? items : Array(items.prefix(Self.collapsedItemLimit))
     }
 
@@ -72,7 +68,7 @@ struct WorkoutsView: View {
                             .foregroundStyle(DSColor.textSecondary)
                     } else {
                         VStack(spacing: DSSpacing.cardGap) {
-                            ForEach(visiblePrograms) { program in
+                            ForEach(visible(programs, isExpanded: isShowingAllPrograms)) { program in
                                 NavigationLink {
                                     WorkoutProgramDetailView(program: program)
                                 } label: {
@@ -104,7 +100,7 @@ struct WorkoutsView: View {
 
                                 let isExpanded = expandedWorkoutGroups.contains(activityType)
                                 VStack(spacing: DSSpacing.cardGap) {
-                                    ForEach(visibleItems(items, isExpanded: isExpanded)) { plan in
+                                    ForEach(visible(items, isExpanded: isExpanded)) { plan in
                                         NavigationLink {
                                             WorkoutDetailView(plan: plan)
                                         } label: {
