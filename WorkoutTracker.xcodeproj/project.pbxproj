@@ -85,6 +85,7 @@
 		9186A9CBEAE3172BC2EFC7E6 /* Radius.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16036100EB46E8A6AED3563A /* Radius.swift */; };
 		91EB7932AB3CAF8862687CA5 /* ContributionHeatmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DE33348299B4AB27FB3DA3E /* ContributionHeatmapView.swift */; };
 		9558B41037B60059FF2943B1 /* SchemaV1+ChallengeEnrollment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B894ADA7C4B6CE021683B58 /* SchemaV1+ChallengeEnrollment.swift */; };
+		9767F45F80FA986411EBB6A5 /* ChallengeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D12B71E14D0CDB1A1454D4F /* ChallengeDetailView.swift */; };
 		9C9B579DFC867DF46F6AB114 /* WorkoutProgramEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1647EF586428B8FE93B62DC1 /* WorkoutProgramEditorViewModel.swift */; };
 		A4C43683782002D6FC99AC11 /* SetProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FF2DCC17C81CDD148ECC6F5 /* SetProgressBar.swift */; };
 		AA52FDAFE04499408FD0C528 /* NextWorkoutWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7AA664EA24819DC2C5E4CC8 /* NextWorkoutWidget.swift */; };
@@ -172,6 +173,7 @@
 		09D35704C231EF78FFB4599D /* SchemaV1+RankState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+RankState.swift"; sourceTree = "<group>"; };
 		0A0AE9C36EB317021885B096 /* ReorderableRowStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReorderableRowStyle.swift; sourceTree = "<group>"; };
 		0AE8B40DC674C6AC438614F4 /* MockHealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockHealthKitService.swift; sourceTree = "<group>"; };
+		0D12B71E14D0CDB1A1454D4F /* ChallengeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeDetailView.swift; sourceTree = "<group>"; };
 		135008F6E33561CD8B526489 /* ActiveExerciseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveExerciseCard.swift; sourceTree = "<group>"; };
 		1576F058778640D9FED820FC /* DSButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSButton.swift; sourceTree = "<group>"; };
 		158049C52F19678E8CC8F33A /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
@@ -531,6 +533,7 @@
 			isa = PBXGroup;
 			children = (
 				653EFC65B2A707C03D71DDF0 /* ChallengeCatalogRow.swift */,
+				0D12B71E14D0CDB1A1454D4F /* ChallengeDetailView.swift */,
 				8546DD1635FEFD84843BBA18 /* ChallengeEnrollmentCard.swift */,
 				8DE33348299B4AB27FB3DA3E /* ContributionHeatmapView.swift */,
 				D13170777983107042527E53 /* PersonalRecordRow.swift */,
@@ -744,6 +747,7 @@
 				E6C0AF7195A0B2DA6C259EFF /* ActiveExerciseCard.swift in Sources */,
 				C7303B7C33E99CEE63D8BD81 /* ActivityType.swift in Sources */,
 				7329850F9DE32881C2E98817 /* ChallengeCatalogRow.swift in Sources */,
+				9767F45F80FA986411EBB6A5 /* ChallengeDetailView.swift in Sources */,
 				59FDD48D09918595E35632CF /* ChallengeEnrollmentCard.swift in Sources */,
 				EB968A728441404991A81F55 /* ChallengeInsights.swift in Sources */,
 				F1DE5D7259A4DBFFDAD8108E /* ChallengeProgressMaterialization.swift in Sources */,
