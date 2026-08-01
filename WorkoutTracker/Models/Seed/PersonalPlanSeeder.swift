@@ -17,13 +17,21 @@ import SwiftData
 /// zum bewerteten DLAMSD02-Projektbericht-Umfang (siehe Projekt-Memory) und
 /// ist bewusst `#if DEBUG`-only, damit es nie in einem Release-Build landet.
 enum PersonalPlanSeeder {
-    private static let firstWorkoutName = "Push A - schwer"
+    /// Alle 6 Zielnamen statt nur des ersten - `Workout.name` ist über
+    /// `WorkoutEditorViewModel` frei umbenennbar, ein Check auf nur einen
+    /// Namen würde beim Umbenennen genau dieses einen Workouts die anderen
+    /// fünf beim nächsten Tastendruck stillschweigend duplizieren.
+    private static let workoutNames: Set<String> = [
+        "Push A - schwer", "Push B - Pump",
+        "Pull A - schwer", "Pull B - Pump",
+        "Legs A - schwer", "Legs B - leicht",
+    ]
 
     @MainActor
     static func seed(in context: ModelContext) {
-        let name = Self.firstWorkoutName
+        let names = Self.workoutNames
         let alreadySeeded = (try? context.fetchCount(FetchDescriptor<Workout>(
-            predicate: #Predicate { $0.name == name }
+            predicate: #Predicate { names.contains($0.name) }
         ))) ?? 0
         guard alreadySeeded == 0 else { return }
 
@@ -60,7 +68,7 @@ enum PersonalPlanSeeder {
             return created
         }
 
-        func makeWorkout(_ workoutName: String, _ entries: [(name: String, muscleGroup: MuscleGroup, sets: Int, reps: Int)]) -> Workout {
+        func makeWorkout(_ workoutName: String, _ entries: [(name: String, muscleGroup: MuscleGroup, sets: Int, reps: Int)]) {
             let workout = Workout(name: workoutName, activityType: .kraft)
             context.insert(workout)
             for (index, entry) in entries.enumerated() {
@@ -73,7 +81,6 @@ enum PersonalPlanSeeder {
                 plannedExercise.plan = workout
                 context.insert(plannedExercise)
             }
-            return workout
         }
 
         // Wiederholungs-Bereiche aus dem PDF (z.B. "6-8") werden als
@@ -85,7 +92,7 @@ enum PersonalPlanSeeder {
             ("Tibialis-Raises", .beine, 3, 15),
         ]
 
-        _ = makeWorkout("Push A - schwer", [
+        makeWorkout("Push A - schwer", [
             ("Bankdrücken (LH)", .brust, 4, 6),
             ("Schrägbank KH", .brust, 3, 8),
             ("Schulterdrücken (KH)", .schultern, 3, 8),
@@ -94,7 +101,7 @@ enum PersonalPlanSeeder {
             ("Overhead Extension", .arme, 3, 12),
         ])
 
-        _ = makeWorkout("Push B - Pump", [
+        makeWorkout("Push B - Pump", [
             ("KH-Bankdrücken", .brust, 3, 10),
             ("Brustpresse / Butterfly", .brust, 3, 12),
             ("Arnold Press", .schultern, 3, 10),
@@ -103,7 +110,7 @@ enum PersonalPlanSeeder {
             ("Trizeps Kickbacks", .arme, 3, 12),
         ])
 
-        _ = makeWorkout("Pull A - schwer", [
+        makeWorkout("Pull A - schwer", [
             ("Klimmzüge / Lat Pulldown", .ruecken, 4, 6),
             ("Rudern Langhantel", .ruecken, 4, 8),
             ("Einarm-KH-Rudern", .ruecken, 3, 10),
@@ -112,7 +119,7 @@ enum PersonalPlanSeeder {
             ("Hammer Curls", .arme, 3, 12),
         ])
 
-        _ = makeWorkout("Pull B - Pump", [
+        makeWorkout("Pull B - Pump", [
             ("Lat Pulldown (eng/neutral)", .ruecken, 3, 10),
             ("Kabelrudern sitzend", .ruecken, 3, 10),
             ("Reverse Flys / Rear Delt", .ruecken, 3, 15),
@@ -121,14 +128,14 @@ enum PersonalPlanSeeder {
             ("Kabel-Curls", .arme, 3, 12),
         ])
 
-        _ = makeWorkout("Legs A - schwer", [
+        makeWorkout("Legs A - schwer", [
             ("Kniebeugen (LH)", .beine, 4, 6),
             ("Rumänisches Kreuzheben", .beine, 3, 8),
             ("Beinpresse", .beine, 3, 10),
             ("Ausfallschritte (KH)", .beine, 3, 10),
         ] + calfBlock)
 
-        _ = makeWorkout("Legs B - leicht", [
+        makeWorkout("Legs B - leicht", [
             ("Hip Thrust", .beine, 4, 10),
             ("Beinpresse (hoch)", .beine, 3, 15),
             ("Leg Curls", .beine, 3, 12),
