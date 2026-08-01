@@ -89,4 +89,16 @@ enum ChallengeInsights {
         guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: today) else { return 0 }
         return entries.filter { weekInterval.contains($0.date) }.count
     }
+
+    /// Aktueller Fortschrittswert einer Challenge, je nach `challengeType`
+    /// entweder die Streak-Länge oder der Wochenfrequenz-Zähler - gemeinsam
+    /// genutzt von `ChallengeEnrollmentCard` und `ChallengeDetailView`.
+    static func currentProgress(for challenge: Challenge, calendar: Calendar = .current, today: Date = .now) -> Int {
+        switch challenge.challengeType {
+        case .streakTage:
+            currentStreakDays(entries: challenge.progressEntries, calendar: calendar, today: today)
+        case .frequenzProWoche:
+            weeklyProgress(entries: challenge.progressEntries, calendar: calendar, today: today)
+        }
+    }
 }
