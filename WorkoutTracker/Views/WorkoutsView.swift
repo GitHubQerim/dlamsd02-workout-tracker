@@ -16,6 +16,10 @@ struct WorkoutsView: View {
     @State private var isPresentingNewProgram = false
     @State private var freeTrainingSessionViewModel: WorkoutSessionViewModel?
     @State private var selectedTab: WorkoutsTab = .plans
+    @State private var isShowingAllPrograms = false
+    @State private var expandedWorkoutGroups: Set<ActivityType> = []
+
+    private static let collapsedItemLimit = 5
 
     private var hasOpenSession: Bool { !openSessions.isEmpty }
 
@@ -28,6 +32,10 @@ struct WorkoutsView: View {
             guard let items = grouped[type], !items.isEmpty else { return nil }
             return (type, items)
         }
+    }
+
+    private func visible<Item>(_ items: [Item], isExpanded: Bool) -> [Item] {
+        isExpanded ? items : Array(items.prefix(Self.collapsedItemLimit))
     }
 
     var body: some View {
@@ -60,7 +68,7 @@ struct WorkoutsView: View {
                             .foregroundStyle(DSColor.textSecondary)
                     } else {
                         VStack(spacing: DSSpacing.cardGap) {
-                            ForEach(programs) { program in
+                            ForEach(visible(programs, isExpanded: isShowingAllPrograms)) { program in
                                 NavigationLink {
                                     WorkoutProgramDetailView(program: program)
                                 } label: {
@@ -68,6 +76,9 @@ struct WorkoutsView: View {
                                 }
                                 .buttonStyle(.plain)
                             }
+                        }
+                        expandToggle(totalCount: programs.count, isExpanded: isShowingAllPrograms) {
+                            isShowingAllPrograms.toggle()
                         }
                     }
                 } else {
@@ -87,8 +98,9 @@ struct WorkoutsView: View {
                                     .font(DSFont.caption)
                                     .foregroundStyle(DSColor.textTertiary)
 
+                                let isExpanded = expandedWorkoutGroups.contains(activityType)
                                 VStack(spacing: DSSpacing.cardGap) {
-                                    ForEach(items) { plan in
+                                    ForEach(visible(items, isExpanded: isExpanded)) { plan in
                                         NavigationLink {
                                             WorkoutDetailView(plan: plan)
                                         } label: {
@@ -102,6 +114,13 @@ struct WorkoutsView: View {
                                             }
                                         }
                                         .buttonStyle(.plain)
+                                    }
+                                }
+                                expandToggle(totalCount: items.count, isExpanded: isExpanded) {
+                                    if isExpanded {
+                                        expandedWorkoutGroups.remove(activityType)
+                                    } else {
+                                        expandedWorkoutGroups.insert(activityType)
                                     }
                                 }
                             }
@@ -163,6 +182,19 @@ struct WorkoutsView: View {
                         .foregroundStyle(DSColor.accent)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func expandToggle(totalCount: Int, isExpanded: Bool, toggle: @escaping () -> Void) -> some View {
+        if totalCount > Self.collapsedItemLimit {
+            Button(action: toggle) {
+                Text(isExpanded ? "Weniger anzeigen" : "Alle \(totalCount) anzeigen")
+                    .font(DSFont.caption)
+                    .foregroundStyle(DSColor.accent)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
