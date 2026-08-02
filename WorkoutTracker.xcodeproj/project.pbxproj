@@ -89,6 +89,7 @@
 		9C9B579DFC867DF46F6AB114 /* WorkoutProgramEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1647EF586428B8FE93B62DC1 /* WorkoutProgramEditorViewModel.swift */; };
 		A4C43683782002D6FC99AC11 /* SetProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FF2DCC17C81CDD148ECC6F5 /* SetProgressBar.swift */; };
 		AA52FDAFE04499408FD0C528 /* NextWorkoutWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7AA664EA24819DC2C5E4CC8 /* NextWorkoutWidget.swift */; };
+		AAD745E97071781BF87320CA /* ModelNavigationID.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF030944C846CA87AF773DAB /* ModelNavigationID.swift */; };
 		AF7DCDEFC2EC5545DAD794BA /* HealthKitImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6E6EF8D3524C51016160F /* HealthKitImportView.swift */; };
 		B1B82E931121DF633FDFFF92 /* RankSectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C135DD9A3A8750084C9E8C95 /* RankSectionCard.swift */; };
 		B3294B03E1D552B81787BA11 /* HealthKitImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318649E12811F668C2EA95A6 /* HealthKitImportViewModel.swift */; };
@@ -262,6 +263,7 @@
 		CAFE7837E03537840D5F9E29 /* DSIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSIcon.swift; sourceTree = "<group>"; };
 		CB5CBC31F5C46E70A4B6D4CE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CD6F35ED62FBEBDF8D4D8DC9 /* WorkoutDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDetailView.swift; sourceTree = "<group>"; };
+		CF030944C846CA87AF773DAB /* ModelNavigationID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelNavigationID.swift; sourceTree = "<group>"; };
 		CFB89BA958473D4799209DE5 /* WorkoutTrackerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WorkoutTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0FD2B8964C815DA10F72DBB /* HeatmapColorMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapColorMapping.swift; sourceTree = "<group>"; };
 		D13170777983107042527E53 /* PersonalRecordRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalRecordRow.swift; sourceTree = "<group>"; };
@@ -517,6 +519,7 @@
 				4350E4AC950B9871AD1E134A /* DurationFormatting.swift */,
 				46F4654D9F6B044956020A2A /* HealthKitActivityMapping.swift */,
 				D0FD2B8964C815DA10F72DBB /* HeatmapColorMapping.swift */,
+				CF030944C846CA87AF773DAB /* ModelNavigationID.swift */,
 				2DC7E2FE2C5800BB4EB72D9A /* PersonalRecordDetection.swift */,
 				FB46327611632A025CFAC667 /* PreviousSessionLookup.swift */,
 				3A4A50A3E21DB40DE4272675 /* RankEngine.swift */,
@@ -781,6 +784,7 @@
 				798C53DD2E5E3EC27DA6DABB /* HealthKitService.swift in Sources */,
 				18E2E9DFD3340078BDE80B3C /* HealthKitServicing.swift in Sources */,
 				1FC97B8CA44D1ADAC79087AC /* HeatmapColorMapping.swift in Sources */,
+				AAD745E97071781BF87320CA /* ModelNavigationID.swift in Sources */,
 				84DE745B11CF1FF871AB6633 /* Motion.swift in Sources */,
 				FE6612CD8E1F8DF7EF79473D /* MuscleGroup.swift in Sources */,
 				6833FEF5D3A0470DB9C3A4DB /* PersonalPlanSeeder.swift in Sources */,
