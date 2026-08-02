@@ -5,18 +5,22 @@ import Foundation
 
 @MainActor
 struct PersonalPlanSeederTests {
-    @Test func seedCreatesSixWorkoutsUnderOneProgram() throws {
+    @Test func seedCreatesSixWorkoutsWithoutProgram() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
 
         PersonalPlanSeeder.seed(in: context)
 
-        let programs = try context.fetch(FetchDescriptor<WorkoutProgram>())
-        #expect(programs.count == 1)
-        #expect(programs.first?.entries.count == 6)
-
         let workouts = try context.fetch(FetchDescriptor<Workout>())
         #expect(workouts.count == 6)
+        #expect(Set(workouts.map(\.name)) == [
+            "Push A - schwer", "Push B - Pump",
+            "Pull A - schwer", "Pull B - Pump",
+            "Legs A - schwer", "Legs B - leicht",
+        ])
+
+        let programs = try context.fetch(FetchDescriptor<WorkoutProgram>())
+        #expect(programs.isEmpty, "Seeder legt bewusst kein WorkoutProgram an - Nutzer stellt den Plan selbst zusammen")
     }
 
     @Test func seedIsIdempotent() throws {
@@ -26,8 +30,25 @@ struct PersonalPlanSeederTests {
         PersonalPlanSeeder.seed(in: context)
         PersonalPlanSeeder.seed(in: context)
 
-        let programs = try context.fetch(FetchDescriptor<WorkoutProgram>())
-        #expect(programs.count == 1, "Zweiter Aufruf darf das Programm nicht erneut anlegen")
+        let workouts = try context.fetch(FetchDescriptor<Workout>())
+        #expect(workouts.count == 6, "Zweiter Aufruf darf die Workouts nicht erneut anlegen")
+    }
+
+    @Test func seedStaysIdempotentAfterUserRenamesOneSeededWorkout() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        PersonalPlanSeeder.seed(in: context)
+        let pushA = try #require(try context.fetch(FetchDescriptor<Workout>(
+            predicate: #Predicate { $0.name == "Push A - schwer" }
+        )).first)
+        pushA.name = "Montag"
+        try context.save()
+
+        PersonalPlanSeeder.seed(in: context)
+
+        let workouts = try context.fetch(FetchDescriptor<Workout>())
+        #expect(workouts.count == 6, "Umbenennen eines einzelnen Workouts darf die anderen fünf nicht duplizieren")
     }
 
     @Test func seedReusesExistingExerciseByExactName() throws {
