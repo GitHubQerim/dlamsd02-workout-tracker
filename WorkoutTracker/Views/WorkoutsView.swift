@@ -11,6 +11,10 @@ struct WorkoutsView: View {
     @Query(sort: \Workout.createdAt, order: .reverse) private var plans: [Workout]
     @Query(sort: \WorkoutProgram.createdAt, order: .reverse) private var programs: [WorkoutProgram]
     @Query(filter: #Predicate<WorkoutSession> { $0.endDate == nil }) private var openSessions: [WorkoutSession]
+    @Query(
+        filter: #Predicate<WorkoutSession> { $0.endDate != nil },
+        sort: [SortDescriptor(\WorkoutSession.startDate, order: .reverse)]
+    ) private var completedSessions: [WorkoutSession]
 
     @State private var isPresentingNewPlan = false
     @State private var isPresentingNewProgram = false
@@ -69,9 +73,7 @@ struct WorkoutsView: View {
                     } else {
                         VStack(spacing: DSSpacing.cardGap) {
                             ForEach(visible(programs, isExpanded: isShowingAllPrograms)) { program in
-                                NavigationLink {
-                                    WorkoutProgramDetailView(program: program)
-                                } label: {
+                                NavigationLink(value: WorkoutProgramNavigationID(id: program.persistentModelID)) {
                                     programCard(program)
                                 }
                                 .buttonStyle(.plain)
@@ -101,9 +103,7 @@ struct WorkoutsView: View {
                                 let isExpanded = expandedWorkoutGroups.contains(activityType)
                                 VStack(spacing: DSSpacing.cardGap) {
                                     ForEach(visible(items, isExpanded: isExpanded)) { plan in
-                                        NavigationLink {
-                                            WorkoutDetailView(plan: plan)
-                                        } label: {
+                                        NavigationLink(value: WorkoutNavigationID(id: plan.persistentModelID)) {
                                             DSCard {
                                                 HStack {
                                                     Text(plan.name)
@@ -176,7 +176,7 @@ struct WorkoutsView: View {
                 Text("\(program.entries.count) Tage")
                     .font(DSFont.caption)
                     .foregroundStyle(DSColor.textTertiary)
-                if program.isDefault, let next = program.nextEntry(in: modelContext) {
+                if program.isDefault, let next = program.nextEntry(among: completedSessions) {
                     Text(next.nextDayDisplayText)
                         .font(DSFont.caption)
                         .foregroundStyle(DSColor.accent)

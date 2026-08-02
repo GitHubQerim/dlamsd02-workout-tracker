@@ -16,10 +16,12 @@ enum WidgetSnapshotRefresher {
     }
 
     private static func refreshNextWorkoutSnapshot(context: ModelContext) {
-        let descriptor = FetchDescriptor<WorkoutProgram>(predicate: #Predicate { $0.isDefault == true })
+        let programDescriptor = FetchDescriptor<WorkoutProgram>(predicate: #Predicate { $0.isDefault == true })
+        let sessionDescriptor = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endDate != nil })
         guard
-            let program = try? context.fetch(descriptor).first,
-            let nextEntry = program.nextEntry(in: context)
+            let program = try? context.fetch(programDescriptor).first,
+            let completedSessions = try? context.fetch(sessionDescriptor),
+            let nextEntry = program.nextEntry(among: completedSessions)
         else {
             WidgetSnapshotStore.delete(filename: NextWorkoutSnapshot.filename)
             return

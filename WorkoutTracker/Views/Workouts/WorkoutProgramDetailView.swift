@@ -6,6 +6,10 @@ import SwiftData
 struct WorkoutProgramDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<WorkoutSession> { $0.endDate == nil }) private var openSessions: [WorkoutSession]
+    @Query(
+        filter: #Predicate<WorkoutSession> { $0.endDate != nil },
+        sort: [SortDescriptor(\WorkoutSession.startDate, order: .reverse)]
+    ) private var completedSessions: [WorkoutSession]
     let program: WorkoutProgram
 
     @State private var isPresentingEditor = false
@@ -16,7 +20,7 @@ struct WorkoutProgramDetailView: View {
     }
 
     private var nextEntry: WorkoutProgramEntry? {
-        program.nextEntry(in: modelContext)
+        program.nextEntry(among: completedSessions)
     }
 
     var body: some View {
@@ -41,9 +45,7 @@ struct WorkoutProgramDetailView: View {
                 VStack(spacing: DSSpacing.cardGap) {
                     ForEach(orderedEntries) { entry in
                         if let workout = entry.workout {
-                            NavigationLink {
-                                WorkoutDetailView(plan: workout)
-                            } label: {
+                            NavigationLink(value: WorkoutNavigationID(id: workout.persistentModelID)) {
                                 entryCard(entry, workoutMissing: false)
                             }
                             .buttonStyle(.plain)
