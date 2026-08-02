@@ -93,7 +93,7 @@ struct DashboardView: View {
                     }
                 }
 
-                if let defaultProgram = defaultPrograms.first, let nextEntry = defaultProgram.nextEntry(in: modelContext) {
+                if let defaultProgram = defaultPrograms.first, let nextEntry = defaultProgram.nextEntry(among: completedSessions) {
                     DSCard {
                         HStack {
                             VStack(alignment: .leading, spacing: DSSpacing.s4) {

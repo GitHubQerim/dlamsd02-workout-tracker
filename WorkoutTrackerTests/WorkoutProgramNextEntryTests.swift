@@ -12,7 +12,7 @@ struct WorkoutProgramNextEntryTests {
         context.insert(program)
         try context.save()
 
-        #expect(program.nextEntry(in: context) == nil)
+        #expect(program.nextEntry(among: try context.fetch(FetchDescriptor<WorkoutSession>())) == nil)
     }
 
     @Test func nextEntryReturnsFirstEntryWhenNoSessionsExist() throws {
@@ -32,7 +32,7 @@ struct WorkoutProgramNextEntryTests {
         context.insert(entryB)
         try context.save()
 
-        #expect(program.nextEntry(in: context)?.id == entryA.id)
+        #expect(program.nextEntry(among: try context.fetch(FetchDescriptor<WorkoutSession>()))?.id == entryA.id)
     }
 
     @Test func nextEntryReturnsFollowingEntryAfterLastCompletedSession() throws {
@@ -56,7 +56,7 @@ struct WorkoutProgramNextEntryTests {
         context.insert(session)
         try context.save()
 
-        #expect(program.nextEntry(in: context)?.id == entryB.id)
+        #expect(program.nextEntry(among: try context.fetch(FetchDescriptor<WorkoutSession>()))?.id == entryB.id)
     }
 
     @Test func nextEntryWrapsAroundAfterLastEntry() throws {
@@ -80,7 +80,7 @@ struct WorkoutProgramNextEntryTests {
         context.insert(session)
         try context.save()
 
-        #expect(program.nextEntry(in: context)?.id == entryA.id, "Nach dem letzten Tag geht es wieder mit dem ersten weiter")
+        #expect(program.nextEntry(among: try context.fetch(FetchDescriptor<WorkoutSession>()))?.id == entryA.id, "Nach dem letzten Tag geht es wieder mit dem ersten weiter")
     }
 
     /// Deckt den Force-Unwrap-Fix ab: eine Session, deren `programEntryID`
@@ -103,6 +103,6 @@ struct WorkoutProgramNextEntryTests {
         context.insert(session)
         try context.save()
 
-        #expect(program.nextEntry(in: context)?.id == entryA.id)
+        #expect(program.nextEntry(among: try context.fetch(FetchDescriptor<WorkoutSession>()))?.id == entryA.id)
     }
 }
