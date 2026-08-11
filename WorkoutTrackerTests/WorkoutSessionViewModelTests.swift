@@ -41,6 +41,10 @@ struct WorkoutSessionViewModelTests {
         context.insert(exercise)
 
         let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        // Zweiter Satz, damit der erste getoggelte NICHT der letzte offene
+        // Satz der Session ist - sonst würde der Timer laut
+        // toggleSetCompletionOnLastSetDoesNotStartRestTimer nicht starten.
+        viewModel.addSet(for: exercise, suggestedReps: 10, suggestedWeightKg: 50)
         viewModel.addSet(for: exercise, suggestedReps: 10, suggestedWeightKg: 50)
         let setLog = viewModel.session.setLogs[0]
 
@@ -48,6 +52,22 @@ struct WorkoutSessionViewModelTests {
         viewModel.toggleSetCompletion(setLog)
         #expect(viewModel.isRestTimerRunning == true)
         #expect(setLog.isCompleted == true)
+    }
+
+    @Test func toggleSetCompletionOnLastSetDoesNotStartRestTimer() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, suggestedReps: 10, suggestedWeightKg: 50)
+        let setLog = viewModel.session.setLogs[0]
+
+        viewModel.toggleSetCompletion(setLog)
+
+        #expect(viewModel.isWorkoutComplete == true)
+        #expect(viewModel.isRestTimerRunning == false)
     }
 
     @Test func finishSessionSetsEndDateAndPersists() async throws {
@@ -61,6 +81,42 @@ struct WorkoutSessionViewModelTests {
 
         #expect(viewModel.session.endDate != nil)
         #expect(try context.fetchCount(FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endDate == nil })) == 0)
+    }
+
+    @Test func finishSessionEstimatesEnergyWhenBodyWeightAvailable() async throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let mockHealthKitService = MockHealthKitService()
+        mockHealthKitService.bodyWeightKgOverride = 80
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: mockHealthKitService)
+        viewModel.addSet(for: exercise, suggestedReps: 10, suggestedWeightKg: 50)
+        viewModel.toggleSetCompletion(viewModel.session.setLogs[0])
+
+        await viewModel.finishSession()
+
+        #expect(mockHealthKitService.savedSessions.last?.activeEnergyKcal != nil)
+    }
+
+    @Test func finishSessionSkipsEnergyEstimateWhenBodyWeightUnavailable() async throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let mockHealthKitService = MockHealthKitService()
+        mockHealthKitService.bodyWeightKgOverride = nil
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: mockHealthKitService)
+        viewModel.addSet(for: exercise, suggestedReps: 10, suggestedWeightKg: 50)
+        viewModel.toggleSetCompletion(viewModel.session.setLogs[0])
+
+        await viewModel.finishSession()
+
+        #expect(mockHealthKitService.savedSessions.last?.activeEnergyKcal == nil)
     }
 
     @Test func discardSessionDeletesSession() async throws {
@@ -187,6 +243,10 @@ struct WorkoutSessionViewModelTests {
         context.insert(exercise)
 
         let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        // Zweiter Satz, damit der getoggelte nicht der letzte ist und der
+        // Pausentimer tatsächlich startet (siehe
+        // toggleSetCompletionOnLastSetDoesNotStartRestTimer).
+        viewModel.addSet(for: exercise)
         viewModel.addSet(for: exercise)
         viewModel.toggleSetCompletion(viewModel.session.setLogs[0])
         let startBefore = viewModel.restTimerStartDate

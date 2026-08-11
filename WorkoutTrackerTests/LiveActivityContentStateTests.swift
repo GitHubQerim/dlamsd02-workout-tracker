@@ -88,6 +88,10 @@ struct LiveActivityContentStateProjectionTests {
         context.insert(exercise)
 
         let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: MockHealthKitService())
+        // Zweiter Satz, damit der getoggelte nicht der letzte offene Satz
+        // der Session ist und der Pausentimer tatsächlich startet (siehe
+        // toggleSetCompletionOnLastSetDoesNotStartRestTimer).
+        viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 60)
         viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 60)
 
         #expect(viewModel.liveActivityContentState.restTimerStartDate == nil)
