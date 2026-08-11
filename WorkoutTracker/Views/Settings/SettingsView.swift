@@ -68,6 +68,14 @@ struct SettingsView: View {
                         DSButton(title: "Testdaten importieren", variant: .outline, fullWidth: true) {
                             PersonalPlanSeeder.seed(in: modelContext)
                         }
+                        // Einmal-Backfill für Sessions von vor Einführung der
+                        // kcal-Schätzung - nach einmaliger Nutzung wieder
+                        // entfernen, kein dauerhaftes Feature.
+                        DSButton(title: "Kcal für letzte Session nachtragen", variant: .outline, fullWidth: true) {
+                            Task {
+                                await viewModel.backfillMostRecentStrengthSessionEnergyEstimate(context: modelContext)
+                            }
+                        }
                     }
                 }
                 #endif

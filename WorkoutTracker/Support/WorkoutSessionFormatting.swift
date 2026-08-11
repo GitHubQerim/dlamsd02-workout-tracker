@@ -9,4 +9,15 @@ extension WorkoutSession {
         guard !segmentLogs.isEmpty else { return nil }
         return segmentLogs.reduce(0) { $0 + ($1.distanceMeters ?? 0) }
     }
+
+    /// Trainingsvolumen (Σ Wiederholungen × Gewicht) nur über abgeschlossene
+    /// Sätze - Basis für die kcal-Schätzung (`EnergyEstimator`). Bewusst
+    /// getrennt von `ChallengeInsights.volumeByExercise`, das alle Sätze
+    /// unabhängig vom `isCompleted`-Häkchen zählt (ADR-0002-Nachtrag Phase
+    /// D) - hier zählt nur, was tatsächlich absolviert wurde.
+    var completedVolumeKg: Double {
+        setLogs
+            .filter(\.isCompleted)
+            .reduce(0.0) { $0 + Double($1.reps) * $1.weightKg }
+    }
 }
