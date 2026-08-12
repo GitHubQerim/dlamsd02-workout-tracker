@@ -33,6 +33,17 @@ struct SetRow: View {
     var previousSet: PreviousSetSnapshot? = nil
     /// Durchgereicht an beide `SetValueField`s, siehe deren Doc-Kommentar.
     var onFieldFocusChange: ((Bool) -> Void)? = nil
+    /// Bool-Trigger (nicht Zustand) für den Pausen-Ende-Puls, siehe
+    /// `WorkoutSessionView.restExpiredPulseTrigger` - jede `SetRow` bekommt
+    /// denselben Wert durchgereicht, reagiert aber nur, wenn sie zusätzlich
+    /// `isNextUp` ist (siehe `effectivePulseTrigger`). Default `false` hält
+    /// bestehende Previews/Aufrufer lauffähig.
+    var pulseTrigger: Bool = false
+
+    /// Nur die aktuell "als nächstes dran"-Zeile pulsiert - andere Zeilen
+    /// bekommen einen konstant `false` bleibenden Wert, wodurch
+    /// `.animation(value:)` für sie nie anspringt.
+    private var effectivePulseTrigger: Bool { isNextUp ? pulseTrigger : false }
 
     var body: some View {
         HStack(spacing: DSSpacing.stackGap) {
@@ -105,6 +116,12 @@ struct SetRow: View {
         .padding(.vertical, DSSpacing.s12)
         .background(setLog.isCompleted ? DSColor.accentTrack.opacity(0.4) : DSColor.surfaceCard2)
         .clipShape(RoundedRectangle(cornerRadius: DSRadius.tile, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DSRadius.tile, style: .continuous)
+                .stroke(DSColor.accent, lineWidth: 1.5)
+                .opacity(effectivePulseTrigger ? 0.55 : 0)
+        )
         .animation(DSMotion.fast, value: setLog.isCompleted)
+        .animation(DSMotion.pulse, value: effectivePulseTrigger)
     }
 }

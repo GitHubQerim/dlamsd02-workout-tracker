@@ -24,6 +24,83 @@ struct WorkoutSessionViewModelTests {
         #expect(viewModel.session.setLogs.allSatisfy { $0.reps == 8 && $0.weightKg == 60 })
     }
 
+    @Test func startFromPlanSuggestsIncreasedWeightAfterHittingTargetReps() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
+        context.insert(plan)
+        let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise, targetSets: 1, targetReps: 8, targetWeightKg: 60)
+        plannedExercise.plan = plan
+        context.insert(plannedExercise)
+
+        let previousSession = WorkoutSession(activityType: .kraft, endDate: .now)
+        context.insert(previousSession)
+        let previousSet = SetLog(setIndex: 0, exercise: exercise, reps: 8, weightKg: 60, isCompleted: true)
+        previousSet.session = previousSession
+        context.insert(previousSet)
+        try context.save()
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: plan, activityType: .kraft)
+
+        #expect(viewModel.session.setLogs[0].weightKg == 62.5)
+    }
+
+    @Test func startFromPlanKeepsWeightWhenTargetRepsWereMissed() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
+        context.insert(plan)
+        let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise, targetSets: 1, targetReps: 8, targetWeightKg: 60)
+        plannedExercise.plan = plan
+        context.insert(plannedExercise)
+
+        let previousSession = WorkoutSession(activityType: .kraft, endDate: .now)
+        context.insert(previousSession)
+        let previousSet = SetLog(setIndex: 0, exercise: exercise, reps: 6, weightKg: 60, isCompleted: true)
+        previousSet.session = previousSession
+        context.insert(previousSet)
+        try context.save()
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: plan, activityType: .kraft)
+
+        #expect(viewModel.session.setLogs[0].weightKg == 60)
+    }
+
+    @Test func startFromPlanIgnoresUncompletedPreviousSetForSuggestion() throws {
+        // Regression: ein abgebrochener Satz aus der Vorsession trägt noch
+        // den unbearbeiteten Plan-Zielwert (hier: targetReps) - ohne den
+        // isCompleted-Filter im Lookup würde das fälschlich als "Ziel
+        // erreicht" gewertet und eine unbegründete Gewichtssteigerung in die
+        // neue Session schreiben.
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
+        context.insert(plan)
+        let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise, targetSets: 1, targetReps: 8, targetWeightKg: 60)
+        plannedExercise.plan = plan
+        context.insert(plannedExercise)
+
+        let previousSession = WorkoutSession(activityType: .kraft, endDate: .now)
+        context.insert(previousSession)
+        let abandonedSet = SetLog(setIndex: 0, exercise: exercise, reps: 8, weightKg: 60, isCompleted: false)
+        abandonedSet.session = previousSession
+        context.insert(abandonedSet)
+        try context.save()
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: plan, activityType: .kraft)
+
+        #expect(viewModel.session.setLogs[0].weightKg == 60, "Ohne abgeschlossenen Vorsatz darf nur der Plan-Zielwert als Fallback dienen, keine Steigerung")
+    }
+
     @Test func startWithoutPlanCreatesNoSetLogs() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
@@ -68,6 +145,25 @@ struct WorkoutSessionViewModelTests {
 
         #expect(viewModel.isWorkoutComplete == true)
         #expect(viewModel.isRestTimerRunning == false)
+    }
+
+    @Test func lastSetCompletionDoesNotCancelStillRunningRestTimer() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, suggestedReps: 10, suggestedWeightKg: 50)
+        viewModel.addSet(for: exercise, suggestedReps: 10, suggestedWeightKg: 50)
+
+        viewModel.toggleSetCompletion(viewModel.session.setLogs[0])
+        #expect(viewModel.isRestTimerRunning == true)
+
+        viewModel.toggleSetCompletion(viewModel.session.setLogs[1])
+
+        #expect(viewModel.isWorkoutComplete == true)
+        #expect(viewModel.isRestTimerRunning == true, "Ein noch laufender Timer vom vorherigen Satz darf nicht stillschweigend abgebrochen werden")
     }
 
     @Test func finishSessionSetsEndDateAndPersists() async throws {

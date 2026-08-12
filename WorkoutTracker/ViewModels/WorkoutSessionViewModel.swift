@@ -123,12 +123,42 @@ final class WorkoutSessionViewModel: Identifiable {
                 // 0 Wdh. anlegen - stiller Widerspruch zwischen Anzeige und
                 // tatsächlichem Verhalten.
                 let setCount = max(1, plannedExercise.targetSets ?? WorkoutEditorViewModel.defaultTargetSets)
+                let targetReps = plannedExercise.targetReps ?? WorkoutEditorViewModel.defaultTargetReps
+                let fallbackWeightKg = plannedExercise.targetWeightKg ?? 0
+                // Ein Fetch pro Übung (nicht pro Satz) - dieselbe Quelle wie
+                // `previousAttempt(for:)`/der "Letztes Mal"-Vergleich.
+                let previousSession = WorkoutSession.mostRecentCompletedSession(
+                    containingExerciseName: exercise.name,
+                    excluding: session.id,
+                    in: context
+                )
                 for setIndex in 0..<setCount {
+                    // Setindex-genauer Abgleich statt nur "letzter Satz" -
+                    // erhält ein eventuelles Pyramiden-/Absteig-Schema aus
+                    // der Vorsession. Kein passender Satz (z.B. neue Übung,
+                    // damals weniger Sätze) -> Plan-Zielwert als Fallback.
+                    // isCompleted-Filter ist Pflicht, nicht optional: ein
+                    // abgebrochener Satz trägt sonst noch den unbearbeiteten
+                    // Plan-Zielwert und würde fälschlich als "Ziel erreicht"
+                    // gewertet, obwohl der Satz nie tatsächlich absolviert
+                    // wurde - das würde eine unbegründete Gewichtssteigerung
+                    // in die neue Session schreiben.
+                    let previousSet = previousSession?.setLogs.first {
+                        $0.isCompleted && $0.exerciseName == exercise.name && $0.setIndex == setIndex
+                    }
+                    let weightKg = previousSet.map {
+                        ProgressiveOverloadSuggestion.suggestedWeightKg(
+                            previousReps: $0.reps,
+                            previousWeightKg: $0.weightKg,
+                            targetReps: targetReps
+                        )
+                    } ?? fallbackWeightKg
+
                     let setLog = SetLog(
                         setIndex: setIndex,
                         exercise: exercise,
-                        reps: plannedExercise.targetReps ?? WorkoutEditorViewModel.defaultTargetReps,
-                        weightKg: plannedExercise.targetWeightKg ?? 0
+                        reps: targetReps,
+                        weightKg: weightKg
                     )
                     setLog.session = session
                     context.insert(setLog)
@@ -259,7 +289,12 @@ final class WorkoutSessionViewModel: Identifiable {
             // sonst genau einmal hier, nie beide (kein doppelter Activity.update).
             // War das der letzte offene Satz der gesamten Session, gibt es
             // nichts mehr, wonach pausiert werden müsste - dann direkt
-            // finalisieren statt den Pausentimer zu öffnen.
+            // finalisieren statt den Pausentimer zu öffnen. Läuft zu diesem
+            // Zeitpunkt bereits ein Timer vom VORHERIGEN Satz, wird er hier
+            // bewusst NICHT abgebrochen - `isWorkoutComplete` und
+            // `isRestTimerRunning` können also kurzzeitig gleichzeitig `true`
+            // sein. `WorkoutSessionView.finishBar` verlässt sich genau darauf,
+            // um einen solchen Timer im Hintergrund sauber auslaufen zu lassen.
             if isWorkoutComplete {
                 updateLiveActivity()
             } else {
@@ -425,7 +460,11 @@ final class WorkoutSessionViewModel: Identifiable {
         lastRankReconciliation = session.updateRankProgress(in: context)
         restTimerStartDate = nil
         persist()
-        WidgetSnapshotRefresher.refresh(context: context)
+        // Bereits injizierten Service durchreichen statt WidgetSnapshotRefresher
+        // seinen eigenen Default (echter HealthKitService) konstruieren zu
+        // lassen - sonst würde der Move-Ring-Fetch (ADR 0015) in Tests
+        // unkontrolliert echtes HealthKit statt des Mocks treffen.
+        WidgetSnapshotRefresher.refresh(context: context, healthKitService: healthKitService)
         endLiveActivity()
 
         guard session.activityType.usesSetLogs, let endDate = session.endDate else { return }

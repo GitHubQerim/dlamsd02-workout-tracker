@@ -16,6 +16,8 @@ struct ActiveExerciseCard: View {
     let onSetToggled: (SetLog, String) -> Void
     /// Durchgereicht an jede `SetRow`, siehe `SetValueField.onFocusChange`.
     var onFieldFocusChange: ((Bool) -> Void)? = nil
+    /// Durchgereicht an jede `SetRow`, siehe deren `pulseTrigger`-Doc-Kommentar.
+    var pulseTrigger: Bool = false
 
     @State private var previousAttempt: PreviousAttempt?
 
@@ -75,7 +77,8 @@ struct ActiveExerciseCard: View {
                             },
                             isNextUp: setLog.persistentModelID == nextSetID,
                             previousSet: previousAttempt?.sets.first(where: { $0.setIndex == setLog.setIndex }),
-                            onFieldFocusChange: onFieldFocusChange
+                            onFieldFocusChange: onFieldFocusChange,
+                            pulseTrigger: pulseTrigger
                         )
                     }
 

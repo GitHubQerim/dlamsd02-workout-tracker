@@ -25,6 +25,18 @@ struct WorkoutSessionView: View {
     /// `finishBar` (`.safeAreaInset(edge: .bottom)`) - beide überlappen sich
     /// sonst sichtbar. Blendet die Pille für diesen Zeitraum aus.
     @State private var isAnyValueFieldFocused = false
+    /// Ob die große `RestTimerView` gerade explizit angezeigt wird - vom
+    /// bloßen "läuft ein Pausen-Timer" (`viewModel.restTimerStartDate`)
+    /// entkoppelt, damit eine neue Pause standardmäßig minimiert in der
+    /// `finishBar` startet statt automatisch das Vollbild zu öffnen. Wird
+    /// bei jedem neuen Satz-Abhaken in `handleSetToggled` zurückgesetzt.
+    @State private var isRestTimerExpanded = false
+    /// Fürs Haptic + den Zeilen-Puls, wenn eine Pause abläuft, während sie
+    /// minimiert war (siehe `restTimerAutoSkipWatcher`). Explizit auf `true`
+    /// gesetzt und nach der Puls-Animationsdauer wieder auf `false`
+    /// zurückgesetzt - kein reines `.toggle()`, sonst bliebe der visuelle
+    /// Puls nach dem ersten Ablauf-Event dauerhaft sichtbar.
+    @State private var restExpiredPulseTrigger = false
     @Namespace private var expandNamespace
 
     private var activeExerciseName: String? {
@@ -70,6 +82,14 @@ struct WorkoutSessionView: View {
                     }
                 }
                 .safeAreaInset(edge: .bottom) {
+                    // TODO: Bleibt vorerst beim Ausblenden während Feld-Fokus
+                    // (statt dauerhaft sichtbar) - ein Versuch, die Pille
+                    // immer zu zeigen, kollidierte je nach Scroll-Position
+                    // sichtbar mit der Tastatur-Toolbar (`SetValueField`s
+                    // `.toolbar(.keyboard)`). Für den Pause-Fall bräuchte
+                    // das eine eigene, nicht-kollidierende Darstellung (z.B.
+                    // ein kleines Badge oben) statt einfach dieselbe Pille
+                    // stehen zu lassen - noch offen.
                     if !isAnyValueFieldFocused {
                         finishBar
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -82,6 +102,12 @@ struct WorkoutSessionView: View {
                     }
                 }
             }
+            // Muss unabhängig von `finishBar` dauerhaft aktiv bleiben (siehe
+            // dortiger Kommentar) - läuft eine Pause exakt während ein
+            // Eingabefeld fokussiert ist ab (finishBar dann nicht gemountet),
+            // gäbe es sonst keinen beobachtbaren `onChange`-Übergang mehr und
+            // Auto-Skip/Puls/Haptic würden nie feuern.
+            .background(restTimerAutoSkipWatcher)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -108,6 +134,10 @@ struct WorkoutSessionView: View {
                     onSkip: viewModel.skipRestTimer
                 )
             }
+            // condition: nur beim Wechsel zu `true` feuern - der programmatische
+            // Reset auf `false` (siehe restTimerAutoSkipWatcher) darf keine
+            // zweite Haptic auslösen.
+            .sensoryFeedback(.warning, trigger: restExpiredPulseTrigger) { _, newValue in newValue }
             .confirmationDialog("Training beenden?", isPresented: $isPresentingFinishDialog, titleVisibility: .visible) {
                 Button("Speichern & beenden") {
                     Task {
@@ -137,14 +167,20 @@ struct WorkoutSessionView: View {
 
     @State private var restTimerExerciseName: String = ""
 
+    /// Zeigt das `.fullScreenCover` nur, wenn zusätzlich zum laufenden
+    /// Pausen-Timer auch explizit `isRestTimerExpanded` gesetzt ist - eine
+    /// neue Pause startet also standardmäßig minimiert (siehe `finishBar`).
     private var restTimerBinding: Binding<RestTimerPresentation?> {
         Binding(
             get: {
-                guard let start = viewModel.restTimerStartDate else { return nil }
+                guard isRestTimerExpanded, let start = viewModel.restTimerStartDate else { return nil }
                 return RestTimerPresentation(startDate: start, exerciseName: restTimerExerciseName)
             },
             set: { newValue in
-                if newValue == nil { viewModel.skipRestTimer() }
+                if newValue == nil {
+                    isRestTimerExpanded = false
+                    viewModel.skipRestTimer()
+                }
             }
         )
     }
@@ -164,25 +200,59 @@ struct WorkoutSessionView: View {
     /// `SetRow`/`CollapsedExerciseRow`, nur hier auf die permanente Pille
     /// übertragen. Label wechselt von "beenden" auf "abschließen", weil es ab
     /// diesem Punkt kein Abbruch mehr ist, sondern ein echter Abschluss.
+    ///
+    /// Läuft zusätzlich ein Pausen-Timer, übernimmt derselbe linke Bereich
+    /// (Titel+Gesamtzeit) stattdessen einen großen, akzentfarbenen Countdown
+    /// ("Pause"-Zustand) - kein zweites `TimelineView`, derselbe Tick treibt
+    /// beides. `isComplete` hat dabei bewusst Vorrang vor "Pause": schließt
+    /// der letzte Satz das Workout ab, während der Timer vom vorletzten Satz
+    /// noch läuft (`WorkoutSessionViewModel.toggleSetCompletion` bricht
+    /// diesen Timer nicht ab), zeigt die Pille sofort "abschließen" statt
+    /// "Pause" - der verwaiste Timer läuft im Hintergrund trotzdem sauber
+    /// aus (siehe `restTimerAutoSkipWatcher`, bewusst ohne `!isComplete`-
+    /// Guard dort).
     @ViewBuilder
     private var finishBar: some View {
         let isComplete = viewModel.isWorkoutComplete
+        let isResting = viewModel.isRestTimerRunning && !isComplete
 
         TimelineView(.periodic(from: viewModel.session.startDate, by: 1)) { context in
-            HStack(spacing: DSSpacing.stackGap) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.displayTitle)
-                        .font(DSFont.body)
-                        .foregroundStyle(isComplete ? DSColor.textOnInvert : DSColor.textPrimary)
-                        .lineLimit(1)
-                    Text(context.date.timeIntervalSince(viewModel.session.startDate).formattedClock)
-                        .font(DSFont.caption)
-                        .foregroundStyle(isComplete ? DSColor.textOnInvert.opacity(0.7) : DSColor.textSecondary)
-                        .monospacedDigit()
-                }
-                .accessibilityElement(children: .combine)
+            let restStart = viewModel.restTimerStartDate
+            let restRemaining = restStart.map { max(0, viewModel.restTimerDuration - context.date.timeIntervalSince($0)) }
 
-                Spacer()
+            HStack(spacing: DSSpacing.stackGap) {
+                HStack(spacing: DSSpacing.stackGap) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        if isResting {
+                            Text("Pause")
+                                .font(DSFont.caption)
+                                .foregroundStyle(DSColor.accent)
+                            Text((restRemaining ?? 0).formattedClock)
+                                .font(DSFont.metric)
+                                .foregroundStyle(DSColor.accent)
+                                .monospacedDigit()
+                        } else {
+                            Text(viewModel.displayTitle)
+                                .font(DSFont.body)
+                                .foregroundStyle(isComplete ? DSColor.textOnInvert : DSColor.textPrimary)
+                                .lineLimit(1)
+                            Text(context.date.timeIntervalSince(viewModel.session.startDate).formattedClock)
+                                .font(DSFont.caption)
+                                .foregroundStyle(isComplete ? DSColor.textOnInvert.opacity(0.7) : DSColor.textSecondary)
+                                .monospacedDigit()
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    guard isResting else { return }
+                    isRestTimerExpanded = true
+                }
+                .accessibilityAddTraits(isResting ? .isButton : [])
+                .accessibilityHint(isResting ? "Doppeltippen, um den Pausen-Timer zu öffnen" : "")
 
                 Button(isComplete ? "Workout abschließen" : "Workout beenden") {
                     isPresentingFinishDialog = true
@@ -196,10 +266,42 @@ struct WorkoutSessionView: View {
             .padding(.horizontal, DSSpacing.s16)
             .frame(minHeight: 56)
             .background(isComplete ? DSColor.accent : DSColor.surfaceCard, in: Capsule())
-            .overlay(Capsule().stroke(DSColor.borderStrong, lineWidth: 1))
+            .overlay(Capsule().stroke(isResting ? DSColor.accent : DSColor.borderStrong, lineWidth: isResting ? 2 : 1))
             .padding(.horizontal, DSSpacing.screenGutter)
             .padding(.bottom, DSSpacing.s8)
             .animation(DSMotion.base, value: isComplete)
+            .animation(DSMotion.base, value: isResting)
+        }
+    }
+
+    /// Unsichtbarer, IMMER gemounteter Beobachter für den Pausen-Ablauf -
+    /// bewusst getrennt von `finishBar` (die bei Feld-Fokus ausgeblendet
+    /// wird, siehe dortiger Kommentar), damit Auto-Skip/Puls/Haptic auch
+    /// dann feuern, wenn die Pause exakt während einer Zahlen-Eingabe
+    /// abläuft. `finishBar` behält ihre eigene, rein darstellende
+    /// Restzeit-Berechnung für den Countdown-Text.
+    private var restTimerAutoSkipWatcher: some View {
+        TimelineView(.periodic(from: viewModel.session.startDate, by: 1)) { context in
+            let restStart = viewModel.restTimerStartDate
+            let restRemaining = restStart.map { max(0, viewModel.restTimerDuration - context.date.timeIntervalSince($0)) }
+            let isExpired = restStart != nil && (restRemaining ?? 1) <= 0
+
+            Color.clear
+                .onChange(of: isExpired) { _, expired in
+                    guard expired, !isRestTimerExpanded else { return }
+                    viewModel.skipRestTimer()
+                    // Kein reines .toggle() (ADR-Nachtrag): `true` dann nach
+                    // der Puls-Animationsdauer explizit zurück auf `false` -
+                    // sonst bleibt der Akzent-Rahmen auf der SetRow nach dem
+                    // ersten Ablauf-Event dauerhaft sichtbar, statt kurz
+                    // aufzublinken (repeatCount-Animation läuft aus, hält
+                    // aber beim zuletzt gesetzten Wert).
+                    restExpiredPulseTrigger = true
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(750))
+                        restExpiredPulseTrigger = false
+                    }
+                }
         }
     }
 
@@ -217,7 +319,8 @@ struct WorkoutSessionView: View {
                             withAnimation(DSMotion.base) {
                                 isAnyValueFieldFocused = focused
                             }
-                        }
+                        },
+                        pulseTrigger: restExpiredPulseTrigger
                     )
                     .id(section.name)
                 } else {
@@ -247,6 +350,7 @@ struct WorkoutSessionView: View {
     private func handleSetToggled(_ setLog: SetLog, exerciseName: String) {
         guard setLog.isCompleted else { return }
         restTimerExerciseName = exerciseName
+        isRestTimerExpanded = false
         if viewModel.isExerciseComplete(exerciseName) {
             withAnimation(DSMotion.expand) {
                 expandedExerciseName = viewModel.firstIncompleteExerciseName
