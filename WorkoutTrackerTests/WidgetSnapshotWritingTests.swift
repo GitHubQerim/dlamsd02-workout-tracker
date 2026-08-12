@@ -21,7 +21,7 @@ struct WidgetSnapshotWritingTests {
     @Test func heatmapSnapshotRoundTrips() throws {
         let days = [
             DayCount(date: Date(timeIntervalSince1970: 0), count: 0),
-            DayCount(date: Date(timeIntervalSince1970: 86400), count: 2),
+            DayCount(date: Date(timeIntervalSince1970: 86400), count: 2, moveRingClosed: true),
         ]
         let snapshot = HeatmapSnapshot(days: days)
 
@@ -30,6 +30,24 @@ struct WidgetSnapshotWritingTests {
 
         #expect(decoded.days.map(\.count) == [0, 2])
         #expect(decoded.days.map(\.date) == days.map(\.date))
+        #expect(decoded.days.map(\.moveRingClosed) == [false, true])
+    }
+
+    /// Rückwärtskompatibilität: ein VOR diesem Feature geschriebener
+    /// Widget-Snapshot hat keinen `moveRingClosed`-Key im JSON. Ohne den
+    /// Custom-`Decodable`-Init würde das mit `keyNotFound` scheitern statt
+    /// auf `false` zu defaulten - das Widget würde dann per `try?` in
+    /// `WidgetSnapshotStore.read` ein leeres Grid zeigen statt der zuletzt
+    /// bekannten Daten, bis zum nächsten Refresh.
+    @Test func dayCountDecodesMissingMoveRingKeyAsFalse() throws {
+        let json = Data("""
+        {"date": 0, "count": 2}
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(DayCount.self, from: json)
+
+        #expect(decoded.count == 2)
+        #expect(decoded.moveRingClosed == false)
     }
 
     @Test func extendedToTodayFillsMissingDaysWithZero() throws {

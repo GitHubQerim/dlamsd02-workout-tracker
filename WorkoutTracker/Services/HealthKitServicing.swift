@@ -55,4 +55,13 @@ protocol HealthKitServicing: Sendable {
     /// Neuester `bodyMass`-Wert aus Health, in kg - `nil` falls keine
     /// Daten vorhanden oder der Lesezugriff nicht autorisiert ist.
     func fetchLatestBodyWeightKg() async throws -> Double?
+    /// Kalendertage seit `since`, an denen der "Bewegen"-Aktivitätsring
+    /// geschlossen wurde (`activeEnergyBurned >= activeEnergyBurnedGoal`) -
+    /// reine `Date`s, kein `HKActivitySummary` überschreitet die Protokoll-
+    /// Grenze (ADR 0011). Tage ohne Activity-Summary fehlen einfach im
+    /// Ergebnis (= "nicht geschlossen"). Fehlerfall (keine Berechtigung,
+    /// Query-Fehler) ist Sache des Aufrufers - degradiert NICHT hier auf ein
+    /// leeres Set, jeder Aufrufer wendet `try?` selbst an, analog
+    /// `fetchLatestBodyWeightKg` (siehe ADR 0015).
+    func fetchClosedMoveRingDates(since: Date, calendar: Calendar) async throws -> Set<Date>
 }

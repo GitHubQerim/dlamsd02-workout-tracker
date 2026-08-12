@@ -25,6 +25,7 @@ final class HealthKitService: HealthKitServicing, @unchecked Sendable {
             HKQuantityType(.distanceCycling),
             HKQuantityType(.distanceWalkingRunning),
             HKQuantityType(.bodyMass),
+            HKObjectType.activitySummaryType(),
         ]
     }
 
@@ -92,8 +93,10 @@ final class HealthKitService: HealthKitServicing, @unchecked Sendable {
         try await healthStore.save(sample)
         // `add(_:to:completion:)` ist seit macOS 14/iOS 17 als API zugunsten
         // von `HKWorkoutBuilder` deprecated, hat aber keine async-Variante
-        // (einzige Stelle im Projekt, die einen Continuation-Wrapper
-        // braucht) - `HKWorkoutBuilder` erzeugt jedoch nur neue Workouts,
+        // (bis zu `fetchClosedMoveRingDates` unten die einzige Stelle im
+        // Projekt, die einen Continuation-Wrapper braucht - dort aus
+        // demselben Grund: `HKActivitySummaryQuery` hat ebenfalls keinen
+        // async-Descriptor) - `HKWorkoutBuilder` erzeugt jedoch nur neue Workouts,
         // kann einem bereits gespeicherten `HKWorkout` nicht nachträglich
         // eine Angabe hinzufügen. Für dieses Einmal-Backfill bleibt die
         // deprecated API bewusst die einzig anwendbare (bei Neuanlage wird
@@ -110,6 +113,47 @@ final class HealthKitService: HealthKitServicing, @unchecked Sendable {
                 }
             }
         }
+    }
+
+    /// `HKActivitySummaryQuery` hat (anders als die sonst hier genutzten
+    /// `HKSampleQueryDescriptor`-Aufrufe) keinen modernen async-Descriptor -
+    /// zweite Continuation-Wrapper-Stelle im Projekt neben `attachEnergy`
+    /// oben (siehe Kommentar dort). Predicate arbeitet bewusst mit
+    /// `DateComponents` statt rohen `Date`s (`HKQuery.predicate(
+    /// forActivitySummariesBetween:end:)`), damit das ganze rollierende
+    /// Heatmap-Fenster in EINER Query kommt statt einer pro Tag.
+    func fetchClosedMoveRingDates(since: Date, calendar: Calendar) async throws -> Set<Date> {
+        // `calendar.dateComponents(_:from:)` liefert Komponenten OHNE die
+        // `.calendar`-Referenz selbst zu setzen - `HKQuery` verlangt sie
+        // aber explizit (sonst Laufzeit-Crash "Date components require a
+        // calendar"), da Tag/Monat/Jahr allein ohne Kalendersystem
+        // mehrdeutig wären.
+        var startComponents = calendar.dateComponents([.day, .month, .year, .era], from: since)
+        startComponents.calendar = calendar
+        var endComponents = calendar.dateComponents([.day, .month, .year, .era], from: .now)
+        endComponents.calendar = calendar
+        let predicate = HKQuery.predicate(forActivitySummariesBetweenStart: startComponents, end: endComponents)
+
+        let summaries = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[HKActivitySummary], Error>) in
+            let query = HKActivitySummaryQuery(predicate: predicate) { _, summaries, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: summaries ?? [])
+                }
+            }
+            healthStore.execute(query)
+        }
+
+        return Set(summaries.compactMap { summary -> Date? in
+            guard let date = summary.dateComponents(for: calendar).date else { return nil }
+            let goal = summary.activeEnergyBurnedGoal.doubleValue(for: .kilocalorie())
+            let burned = summary.activeEnergyBurned.doubleValue(for: .kilocalorie())
+            // goal == 0 (kein konfiguriertes Ziel) darf nie als "geschlossen"
+            // zählen - sonst wäre burned >= 0 trivial immer wahr.
+            guard goal > 0, burned >= goal else { return nil }
+            return calendar.startOfDay(for: date)
+        })
     }
 
     func deleteSession(healthKitUUID: UUID) async throws {

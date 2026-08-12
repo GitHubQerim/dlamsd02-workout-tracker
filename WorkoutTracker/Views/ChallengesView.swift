@@ -83,7 +83,12 @@ struct ChallengesView: View {
                         .foregroundStyle(DSColor.textSecondary)
 
                     WeeklyReviewChart(bars: ChallengeInsights.weeklyReviewBars(from: completedSessions))
-                    ContributionHeatmapView(days: ChallengeInsights.heatmapDays(from: completedSessions))
+                    ContributionHeatmapView(
+                        days: ChallengeInsights.applyingMoveRingSignal(
+                            to: ChallengeInsights.heatmapDays(from: completedSessions),
+                            closedDates: viewModel?.closedMoveRingDates ?? []
+                        )
+                    )
                     TopVolumeList(exercises: ChallengeInsights.topVolumeExercises(from: completedSessions))
                     RecentPersonalRecordsList(records: Array(personalRecords.prefix(5)))
                 }
@@ -98,6 +103,15 @@ struct ChallengesView: View {
             // das ist genau die Invariante, auf die sich `RankEngine.reconcile`
             // verlässt (siehe dessen Doc-Kommentar).
             rankWelcomeBack = viewModel?.reconcileRankDecayOnAppear()
+        }
+        .task {
+            // Kein Verlass auf die Reihenfolge zu .onAppear - falls .task vor
+            // .onAppear ausgeführt wird, hier selbst absichern statt eines
+            // stillschweigend übersprungenen ersten Ladevorgangs.
+            if viewModel == nil {
+                viewModel = ChallengesViewModel(context: modelContext)
+            }
+            await viewModel?.loadMoveRingSignal()
         }
     }
 }

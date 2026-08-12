@@ -83,6 +83,7 @@
 		8AA6E817B6D2EABE5148B3F9 /* DSIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE7837E03537840D5F9E29 /* DSIcon.swift */; };
 		8AB289BB8CEE50F951792FE5 /* RankBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E92D2876D89AB38FF30C3CAF /* RankBadge.swift */; };
 		8B1FBD586804CBB859155AAC /* SchemaV1+ChallengeProgressEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7954CCBD829E66C2456FDF9 /* SchemaV1+ChallengeProgressEntry.swift */; };
+		8C9A5CAF7B7B3886CDABF579 /* HeatmapColorMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EE2B72077CA202F0E99D24A /* HeatmapColorMappingTests.swift */; };
 		90F9C5DBC6A64970ED281D61 /* WorkoutEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C48C5AD70BE5312D3B5BF37 /* WorkoutEditorViewModel.swift */; };
 		9186A9CBEAE3172BC2EFC7E6 /* Radius.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16036100EB46E8A6AED3563A /* Radius.swift */; };
 		91EB7932AB3CAF8862687CA5 /* ContributionHeatmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DE33348299B4AB27FB3DA3E /* ContributionHeatmapView.swift */; };
@@ -244,6 +245,7 @@
 		9740A36DD9E21FE2734F6494 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		99438448D197E4D1601D1F8A /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		9BD43E123BAA745B91E2E6B5 /* WorkoutProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProgramDetailView.swift; sourceTree = "<group>"; };
+		9EE2B72077CA202F0E99D24A /* HeatmapColorMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapColorMappingTests.swift; sourceTree = "<group>"; };
 		9F7C443464076FF798316624 /* ActivityType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityType.swift; sourceTree = "<group>"; };
 		A022AEC657531922AE098FCC /* ConfirmRemovalModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmRemovalModifier.swift; sourceTree = "<group>"; };
 		A39E9AD8A84C54758A03A6D1 /* SchemaV1+WorkoutProgram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+WorkoutProgram.swift"; sourceTree = "<group>"; };
@@ -485,6 +487,7 @@
 				C42C5447A5080C5485630751 /* EnergyEstimatorTests.swift */,
 				258EF55C8F56FFABB9AEA7B4 /* HealthKitActivityMappingTests.swift */,
 				FF8A26F8783E87BBE67F2BB5 /* HealthKitImportViewModelTests.swift */,
+				9EE2B72077CA202F0E99D24A /* HeatmapColorMappingTests.swift */,
 				AEFB1B089F70B9DCEEF2A128 /* LiveActivityContentStateTests.swift */,
 				52C6FE587C01375FFA815EB3 /* ModelTests.swift */,
 				BF12E723F978CB697FC373C5 /* PersonalPlanSeederTests.swift */,
@@ -745,6 +748,7 @@
 				506B1A78ECE9F09F75814201 /* EnergyEstimatorTests.swift in Sources */,
 				0C490A53F9A4BA14532BD19B /* HealthKitActivityMappingTests.swift in Sources */,
 				81735A612B39CBBC0E8E5FFF /* HealthKitImportViewModelTests.swift in Sources */,
+				8C9A5CAF7B7B3886CDABF579 /* HeatmapColorMappingTests.swift in Sources */,
 				3C7B4987189BE0A352677B1E /* LiveActivityContentStateTests.swift in Sources */,
 				841BAEB43230CD3A4932A96B /* MockHealthKitService.swift in Sources */,
 				7DA113EB04A7519368820467 /* ModelTests.swift in Sources */,

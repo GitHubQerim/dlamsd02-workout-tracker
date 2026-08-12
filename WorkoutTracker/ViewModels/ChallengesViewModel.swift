@@ -2,17 +2,33 @@ import Foundation
 import SwiftData
 
 /// Mutierende Aktionen für Challenges - bewusst schlank (nur `join`/`leave`),
-/// keine Lesewerte hier (siehe `ChallengeInsights`, das direkt auf per
-/// `@Query` geladenen Arrays arbeitet, ohne ViewModel-Kopplung).
+/// keine reinen Lesewerte hier (siehe `ChallengeInsights`, das direkt auf
+/// per `@Query` geladenen Arrays arbeitet, ohne ViewModel-Kopplung). Eine
+/// Ausnahme: `loadMoveRingSignal()` ist async HealthKit-I/O mit Fehler-
+/// Swallowing (ADR 0015), kein reiner Wert-Read - das gehört ins ViewModel,
+/// nicht in die View (kein `HealthKitServicing` in Views, siehe andere
+/// ViewModels dieses Projekts).
 @Observable
 @MainActor
 final class ChallengesViewModel {
     private(set) var validationMessage: String?
+    private(set) var closedMoveRingDates: Set<Date> = []
 
     private let context: ModelContext
+    private let healthKitService: HealthKitServicing
 
-    init(context: ModelContext) {
+    init(context: ModelContext, healthKitService: HealthKitServicing = HealthKitService()) {
         self.context = context
+        self.healthKitService = healthKitService
+    }
+
+    /// Lädt das Move-Ring-Signal für die Heatmap nach - degradiert bei
+    /// fehlendem/verweigertem HealthKit-Zugriff still zu "nur Session-
+    /// Farbe", nie zu einem Fehlerbanner (analog `finishSession()`s
+    /// `try?`-Pattern für `fetchLatestBodyWeightKg`, ADR 0015).
+    func loadMoveRingSignal(calendar: Calendar = .current, weeks: Int = 20) async {
+        guard let windowStart = calendar.date(byAdding: .day, value: -(weeks * 7 - 1), to: calendar.startOfDay(for: .now)) else { return }
+        closedMoveRingDates = (try? await healthKitService.fetchClosedMoveRingDates(since: windowStart, calendar: calendar)) ?? []
     }
 
     /// Verhindert doppelten Beitritt zur selben Challenge - reine ViewModel-

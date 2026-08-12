@@ -20,6 +20,8 @@ final class MockHealthKitService: HealthKitServicing, @unchecked Sendable {
     var isAuthorizedOverride = false
     var bodyWeightKgOverride: Double?
     var bodyWeightError: Error?
+    var closedMoveRingDatesOverride: Set<Date> = []
+    var moveRingError: Error?
 
     func isAuthorized() -> Bool {
         isAuthorizedOverride
@@ -49,5 +51,10 @@ final class MockHealthKitService: HealthKitServicing, @unchecked Sendable {
     func fetchLatestBodyWeightKg() async throws -> Double? {
         if let bodyWeightError { throw bodyWeightError }
         return bodyWeightKgOverride
+    }
+
+    func fetchClosedMoveRingDates(since: Date, calendar: Calendar) async throws -> Set<Date> {
+        if let moveRingError { throw moveRingError }
+        return closedMoveRingDatesOverride
     }
 }

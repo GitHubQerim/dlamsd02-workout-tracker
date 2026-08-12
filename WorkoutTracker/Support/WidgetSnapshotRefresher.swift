@@ -9,10 +9,30 @@ import WidgetKit
 /// zum Lesen braucht.
 @MainActor
 enum WidgetSnapshotRefresher {
-    static func refresh(context: ModelContext) {
+    static func refresh(context: ModelContext, healthKitService: HealthKitServicing = HealthKitService()) {
         refreshNextWorkoutSnapshot(context: context)
-        refreshHeatmapSnapshot(context: context)
+        let days = refreshHeatmapSnapshot(context: context)
         WidgetCenter.shared.reloadAllTimelines()
+
+        // Fire-and-forget statt refresh() selbst async zu machen (siehe ADR
+        // 0015) - der HealthKit-Fetch soll den synchronen Snapshot-
+        // Schreibvorgang nicht blockieren. ADR 0013 akzeptiert "kurzzeitig
+        // veraltete" Widget-Daten bereits als Normalfall; ein zweites
+        // Timeline-Reload, sobald der Move-Ring-Fetch durch ist, reicht.
+        //
+        // WICHTIG: der Task fasst `context` NICHT an (nur das bereits
+        // synchron berechnete `days`) - ein `ModelContext` in einem
+        // unstrukturierten `Task` festzuhalten, der die Laufzeit des
+        // Aufrufers überlebt, ist exakt das in ADR 0001 dokumentierte
+        // Bug-Muster (Context überlebt den Container nicht mehr).
+        guard let since = days.first?.date else { return }
+        let calendar = Calendar.current
+        Task {
+            guard let closedDates = try? await healthKitService.fetchClosedMoveRingDates(since: since, calendar: calendar) else { return }
+            let mergedDays = ChallengeInsights.applyingMoveRingSignal(to: days, closedDates: closedDates, calendar: calendar)
+            WidgetSnapshotStore.write(HeatmapSnapshot(days: mergedDays), filename: HeatmapSnapshot.filename)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     private static func refreshNextWorkoutSnapshot(context: ModelContext) {
@@ -34,9 +54,12 @@ enum WidgetSnapshotRefresher {
         WidgetSnapshotStore.write(snapshot, filename: NextWorkoutSnapshot.filename)
     }
 
-    private static func refreshHeatmapSnapshot(context: ModelContext) {
+    @discardableResult
+    private static func refreshHeatmapSnapshot(context: ModelContext) -> [DayCount] {
         let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
-        let snapshot = HeatmapSnapshot(days: ChallengeInsights.heatmapDays(from: sessions))
+        let days = ChallengeInsights.heatmapDays(from: sessions)
+        let snapshot = HeatmapSnapshot(days: days)
         WidgetSnapshotStore.write(snapshot, filename: HeatmapSnapshot.filename)
+        return days
     }
 }

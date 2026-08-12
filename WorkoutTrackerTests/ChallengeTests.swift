@@ -364,6 +364,63 @@ struct ChallengeTests {
         #expect(bars.count == 7)
     }
 
+    @Test func applyingMoveRingSignalMarksMatchingEmptyDayAsClosed() throws {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let days = [DayCount(date: today, count: 0)]
+
+        let merged = ChallengeInsights.applyingMoveRingSignal(to: days, closedDates: [today], calendar: calendar)
+
+        #expect(merged[0].moveRingClosed == true)
+        #expect(merged[0].count == 0, "Merge darf count nicht verändern")
+    }
+
+    @Test func applyingMoveRingSignalAlsoFlagsDayWithSessionsAlreadyFull() throws {
+        // Redundant (isResting-artige Tage sind ohnehin schon "voll"), aber
+        // bewusst dokumentiertes Verhalten: der Merge ist unconditional, kein
+        // count == 0-Guard.
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let days = [DayCount(date: today, count: 2)]
+
+        let merged = ChallengeInsights.applyingMoveRingSignal(to: days, closedDates: [today], calendar: calendar)
+
+        #expect(merged[0].moveRingClosed == true)
+        #expect(merged[0].count == 2)
+    }
+
+    @Test func applyingMoveRingSignalIgnoresDatesOutsideWindow() throws {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let outsideWindow = calendar.date(byAdding: .day, value: -500, to: today)!
+        let days = [DayCount(date: today, count: 0)]
+
+        let merged = ChallengeInsights.applyingMoveRingSignal(to: days, closedDates: [outsideWindow], calendar: calendar)
+
+        #expect(merged[0].moveRingClosed == false)
+    }
+
+    @Test func applyingMoveRingSignalIsNoOpForEmptyClosedDates() throws {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let days = [DayCount(date: today, count: 0)]
+
+        let merged = ChallengeInsights.applyingMoveRingSignal(to: days, closedDates: [], calendar: calendar)
+
+        #expect(merged.map(\.moveRingClosed) == [false])
+    }
+
+    @Test func applyingMoveRingSignalNormalizesNonMidnightTimestamps() throws {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let days = [DayCount(date: today, count: 0)]
+        let noonSameDay = calendar.date(byAdding: .hour, value: 12, to: today)!
+
+        let merged = ChallengeInsights.applyingMoveRingSignal(to: days, closedDates: [noonSameDay], calendar: calendar)
+
+        #expect(merged[0].moveRingClosed == true)
+    }
+
     @Test func reconcileRankDecayOnAppearUpdatesRankStateAndReturnsWelcomeBackResult() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext

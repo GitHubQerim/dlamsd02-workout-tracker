@@ -27,7 +27,7 @@ struct ContributionHeatmapView: View {
                         LazyHGrid(rows: rows, spacing: 4) {
                             ForEach(days) { day in
                                 RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                    .fill(HeatmapColorMapping.color(for: day.count))
+                                    .fill(HeatmapColorMapping.color(for: day))
                                     .frame(width: cellSize, height: cellSize)
                                     .id(day.id)
                             }
