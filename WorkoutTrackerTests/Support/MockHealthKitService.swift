@@ -18,6 +18,8 @@ final class MockHealthKitService: HealthKitServicing, @unchecked Sendable {
     var savedSessionUUID = UUID()
     var importableWorkouts: [HealthKitWorkoutSample] = []
     var isAuthorizedOverride = false
+    var bodyWeightKgOverride: Double?
+    var bodyWeightError: Error?
 
     func isAuthorized() -> Bool {
         isAuthorizedOverride
@@ -42,5 +44,10 @@ final class MockHealthKitService: HealthKitServicing, @unchecked Sendable {
 
     func fetchImportableCardioWorkouts(excluding existingUUIDs: Set<UUID>) async throws -> [HealthKitWorkoutSample] {
         importableWorkouts.filter { !existingUUIDs.contains($0.id) }
+    }
+
+    func fetchLatestBodyWeightKg() async throws -> Double? {
+        if let bodyWeightError { throw bodyWeightError }
+        return bodyWeightKgOverride
     }
 }
