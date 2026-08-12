@@ -73,6 +73,27 @@ enum ChallengeInsights {
         heatmapDays(from: sessions, weeks: 1, calendar: calendar, today: today)
     }
 
+    /// Überlagert das Move-Ring-Signal (Apple Health "Aktivität geschlossen")
+    /// auf ein bereits aggregiertes `[DayCount]` - reine Merge-Funktion, kein
+    /// I/O, getrennt von `heatmapDays` gehalten (analog `EnergyEstimator`:
+    /// Session-Zählung bleibt synchron/HealthKit-frei testbar, der
+    /// HealthKit-Fetch passiert separat im Aufrufer, siehe ADR 0015).
+    /// WICHTIG: `calendar` muss dieselbe Instanz/denselben Wert sein, mit
+    /// der `days` erzeugt wurde - sonst matcht das `Set<Date>`-Lookup leise
+    /// gar nichts, ohne Fehler.
+    static func applyingMoveRingSignal(
+        to days: [DayCount],
+        closedDates: Set<Date>,
+        calendar: Calendar = .current
+    ) -> [DayCount] {
+        guard !closedDates.isEmpty else { return days }
+        let closedDayStarts = Set(closedDates.map { calendar.startOfDay(for: $0) })
+        return days.map { day in
+            guard closedDayStarts.contains(day.date) else { return day }
+            return DayCount(date: day.date, count: day.count, moveRingClosed: true)
+        }
+    }
+
     /// Aktuelle Streak-Länge in Tagen: zählt konsekutive Kalendertage
     /// rückwärts ab dem neuesten Eintrag, bricht bei der ersten Lücke ab.
     /// `0`, wenn der neueste Eintrag weder heute noch gestern liegt (Streak

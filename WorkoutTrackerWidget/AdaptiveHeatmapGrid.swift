@@ -36,7 +36,7 @@ struct AdaptiveHeatmapGrid: View {
                     VStack(spacing: cellSpacing) {
                         ForEach(columns[columnIndex]) { day in
                             RoundedRectangle(cornerRadius: max(cellSize * 0.2, 1), style: .continuous)
-                                .fill(HeatmapColorMapping.color(for: day.count))
+                                .fill(HeatmapColorMapping.color(for: day))
                                 .frame(width: cellSize, height: cellSize)
                         }
                     }

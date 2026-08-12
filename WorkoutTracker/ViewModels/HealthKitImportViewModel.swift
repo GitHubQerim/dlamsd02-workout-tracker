@@ -72,6 +72,10 @@ final class HealthKitImportViewModel {
 
         try? context.save()
         importableWorkouts.removeAll { $0.id == sample.id }
-        WidgetSnapshotRefresher.refresh(context: context)
+        // Bereits injizierten Service durchreichen statt WidgetSnapshotRefresher
+        // seinen eigenen Default (echter HealthKitService) konstruieren zu
+        // lassen - sonst würde der Move-Ring-Fetch (ADR 0015) in Tests
+        // unkontrolliert echtes HealthKit statt des Mocks treffen.
+        WidgetSnapshotRefresher.refresh(context: context, healthKitService: healthKitService)
     }
 }
