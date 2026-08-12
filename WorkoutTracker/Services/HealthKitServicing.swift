@@ -10,6 +10,10 @@ struct HealthKitOutgoingSession: Sendable {
     let activityType: ActivityType
     let start: Date
     let end: Date
+    /// `nil` überspringt das Schreiben von `activeEnergyBurned` komplett -
+    /// z.B. wenn kein Körpergewicht aus Health gelesen werden konnte
+    /// (`EnergyEstimator` liefert dann bewusst keine geratene Zahl).
+    let activeEnergyKcal: Double?
 }
 
 struct HealthKitWorkoutSample: Identifiable, Sendable {
@@ -48,4 +52,7 @@ protocol HealthKitServicing: Sendable {
     func saveStrengthSession(_ session: HealthKitOutgoingSession) async throws -> UUID
     func deleteSession(healthKitUUID: UUID) async throws
     func fetchImportableCardioWorkouts(excluding existingUUIDs: Set<UUID>) async throws -> [HealthKitWorkoutSample]
+    /// Neuester `bodyMass`-Wert aus Health, in kg - `nil` falls keine
+    /// Daten vorhanden oder der Lesezugriff nicht autorisiert ist.
+    func fetchLatestBodyWeightKg() async throws -> Double?
 }

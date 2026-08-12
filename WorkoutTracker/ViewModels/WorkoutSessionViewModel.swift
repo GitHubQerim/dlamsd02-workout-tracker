@@ -257,7 +257,14 @@ final class WorkoutSessionViewModel: Identifiable {
         if setLog.isCompleted {
             // startRestTimer() aktualisiert die Live Activity bereits selbst -
             // sonst genau einmal hier, nie beide (kein doppelter Activity.update).
-            startRestTimer()
+            // War das der letzte offene Satz der gesamten Session, gibt es
+            // nichts mehr, wonach pausiert werden müsste - dann direkt
+            // finalisieren statt den Pausentimer zu öffnen.
+            if isWorkoutComplete {
+                updateLiveActivity()
+            } else {
+                startRestTimer()
+            }
         } else {
             updateLiveActivity()
         }
@@ -422,12 +429,31 @@ final class WorkoutSessionViewModel: Identifiable {
         endLiveActivity()
 
         guard session.activityType.usesSetLogs, let endDate = session.endDate else { return }
+
+        // Körpergewicht kommt live aus Health statt aus einem eigenen,
+        // lokal gepflegten Feld (kein Schema-Bump nötig) - nicht verfügbar
+        // (kein Health-Eintrag oder Lesezugriff verweigert) heißt bewusst
+        // "keine Schätzung" statt eines geratenen Werts, siehe
+        // `EnergyEstimator`.
+        let totalVolumeKg = session.setLogs
+            .filter(\.isCompleted)
+            .reduce(0.0) { $0 + Double($1.reps) * $1.weightKg }
+        let bodyWeightKg = try? await healthKitService.fetchLatestBodyWeightKg()
+        let activeEnergyKcal = bodyWeightKg.flatMap {
+            EnergyEstimator.estimatedActiveEnergyKcal(
+                totalVolumeKg: totalVolumeKg,
+                bodyWeightKg: $0,
+                duration: endDate.timeIntervalSince(session.startDate)
+            )
+        }
+
         do {
             let healthKitUUID = try await healthKitService.saveStrengthSession(
                 HealthKitOutgoingSession(
                     activityType: session.activityType,
                     start: session.startDate,
-                    end: endDate
+                    end: endDate,
+                    activeEnergyKcal: activeEnergyKcal
                 )
             )
             session.healthKitUUID = healthKitUUID
