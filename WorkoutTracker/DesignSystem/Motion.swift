@@ -6,6 +6,11 @@ enum DSMotion {
     static let base = Animation.easeOut(duration: 0.24)
     static let expand = Animation.spring(response: 0.35, dampingFraction: 0.75)
 
+    /// Endliche "Flash"-Animation für Bool-Trigger-Hinweise (z.B. Pausen-Ende-
+    /// Puls auf der nächsten SetRow) - oszilliert kurz und legt sich von
+    /// selbst wieder, kein manuelles State-Cleanup nötig.
+    static let pulse = Animation.easeInOut(duration: 0.25).repeatCount(3, autoreverses: true)
+
     /// Press-down scale for buttons/chips/cards, matching the source
     /// system's `scale(0.96)` + 70% opacity press feedback.
     static let pressScale: CGFloat = 0.96

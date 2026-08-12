@@ -18,6 +18,7 @@
 		18E2E9DFD3340078BDE80B3C /* HealthKitServicing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6D8FD6ADC4422A299C844E5 /* HealthKitServicing.swift */; };
 		1AD63803A1949004C42C58DE /* WidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36AF6316E4816626B4FC7973 /* WidgetSnapshotStore.swift */; };
 		1B26CD96147CFB25AEE922EF /* SchemaV1+Challenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDBF8ADC50402D78CBB13015 /* SchemaV1+Challenge.swift */; };
+		1CA1705BEC1AA22EE30BE90E /* ProgressiveOverloadSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A28D7C275E7C8E473734F36 /* ProgressiveOverloadSuggestion.swift */; };
 		1FC97B8CA44D1ADAC79087AC /* HeatmapColorMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FD2B8964C815DA10F72DBB /* HeatmapColorMapping.swift */; };
 		212F585BF5CB5276C80D7D3B /* SessionSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0B2CD3EE9CD701D7B05AA4 /* SessionSource.swift */; };
 		22F26BFBD0C9E9A9DF9BA0D6 /* AdaptiveHeatmapGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F6B00CC2B09514F6739314 /* AdaptiveHeatmapGrid.swift */; };
@@ -88,6 +89,7 @@
 		92DD22BC2381718F838D5377 /* WorkoutSessionFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812CFAEBF88FF71C818BECBC /* WorkoutSessionFormattingTests.swift */; };
 		9558B41037B60059FF2943B1 /* SchemaV1+ChallengeEnrollment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B894ADA7C4B6CE021683B58 /* SchemaV1+ChallengeEnrollment.swift */; };
 		9767F45F80FA986411EBB6A5 /* ChallengeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D12B71E14D0CDB1A1454D4F /* ChallengeDetailView.swift */; };
+		997B77AA7FCB4DF6EC8688EA /* ProgressiveOverloadSuggestionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5AE145E98443AA221C0D511 /* ProgressiveOverloadSuggestionTests.swift */; };
 		9C9B579DFC867DF46F6AB114 /* WorkoutProgramEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1647EF586428B8FE93B62DC1 /* WorkoutProgramEditorViewModel.swift */; };
 		A4C43683782002D6FC99AC11 /* SetProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FF2DCC17C81CDD148ECC6F5 /* SetProgressBar.swift */; };
 		AA52FDAFE04499408FD0C528 /* NextWorkoutWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7AA664EA24819DC2C5E4CC8 /* NextWorkoutWidget.swift */; };
@@ -208,6 +210,7 @@
 		46F4654D9F6B044956020A2A /* HealthKitActivityMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitActivityMapping.swift; sourceTree = "<group>"; };
 		48B12D81333B0806B656CF51 /* SchemaV1+Workout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+Workout.swift"; sourceTree = "<group>"; };
 		49F6B00CC2B09514F6739314 /* AdaptiveHeatmapGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveHeatmapGrid.swift; sourceTree = "<group>"; };
+		4A28D7C275E7C8E473734F36 /* ProgressiveOverloadSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressiveOverloadSuggestion.swift; sourceTree = "<group>"; };
 		4A3237DB65D3EE1670DA4585 /* SchemaV1+PlannedSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+PlannedSegment.swift"; sourceTree = "<group>"; };
 		4C2D48701CEFFAB8922366E8 /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
 		5102138A25A25445C1AFED84 /* SchemaV1+PlannedExercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+PlannedExercise.swift"; sourceTree = "<group>"; };
@@ -279,6 +282,7 @@
 		E17A68AF8CF7CF462789B406 /* WorkoutSessionLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionLiveActivity.swift; sourceTree = "<group>"; };
 		E1A998FFAB353C55569407D7 /* DSWashedScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSWashedScreen.swift; sourceTree = "<group>"; };
 		E343F538B1185F0474A65F73 /* SchemaV1.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaV1.swift; sourceTree = "<group>"; };
+		E5AE145E98443AA221C0D511 /* ProgressiveOverloadSuggestionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressiveOverloadSuggestionTests.swift; sourceTree = "<group>"; };
 		E85C68F05BF008D3F81EBBEE /* WeeklyReviewChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReviewChart.swift; sourceTree = "<group>"; };
 		E872799DD96BDF2469FF5C83 /* ChallengeSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeSeeder.swift; sourceTree = "<group>"; };
 		E92D2876D89AB38FF30C3CAF /* RankBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankBadge.swift; sourceTree = "<group>"; };
@@ -484,6 +488,7 @@
 				AEFB1B089F70B9DCEEF2A128 /* LiveActivityContentStateTests.swift */,
 				52C6FE587C01375FFA815EB3 /* ModelTests.swift */,
 				BF12E723F978CB697FC373C5 /* PersonalPlanSeederTests.swift */,
+				E5AE145E98443AA221C0D511 /* ProgressiveOverloadSuggestionTests.swift */,
 				AD4B6872789BA77DBA1E3D6E /* RankTests.swift */,
 				99438448D197E4D1601D1F8A /* SettingsViewModelTests.swift */,
 				44DF0B8D665CFD0171B24381 /* TestSupport.swift */,
@@ -531,6 +536,7 @@
 				CF030944C846CA87AF773DAB /* ModelNavigationID.swift */,
 				2DC7E2FE2C5800BB4EB72D9A /* PersonalRecordDetection.swift */,
 				FB46327611632A025CFAC667 /* PreviousSessionLookup.swift */,
+				4A28D7C275E7C8E473734F36 /* ProgressiveOverloadSuggestion.swift */,
 				3A4A50A3E21DB40DE4272675 /* RankEngine.swift */,
 				CAD5BB49B4F8211AD748124E /* RankReconciliation.swift */,
 				7C556B609A440BACE2B480B7 /* WidgetSnapshotRefresher.swift */,
@@ -743,6 +749,7 @@
 				841BAEB43230CD3A4932A96B /* MockHealthKitService.swift in Sources */,
 				7DA113EB04A7519368820467 /* ModelTests.swift in Sources */,
 				799216C53983448054A9F0CC /* PersonalPlanSeederTests.swift in Sources */,
+				997B77AA7FCB4DF6EC8688EA /* ProgressiveOverloadSuggestionTests.swift in Sources */,
 				3FC09BFF63592C04E1DEC808 /* RankTests.swift in Sources */,
 				256369B8CCAFACD807EDC18A /* SettingsViewModelTests.swift in Sources */,
 				EAB5907339D101CCC12CDBCD /* TestSupport.swift in Sources */,
@@ -804,6 +811,7 @@
 				D40DDF020C738F1390588C3D /* PersonalRecordRow.swift in Sources */,
 				64BDFFF7D9773659541DCF26 /* PreviousSessionComparisonCard.swift in Sources */,
 				3B5B9569DA9EF23269C58298 /* PreviousSessionLookup.swift in Sources */,
+				1CA1705BEC1AA22EE30BE90E /* ProgressiveOverloadSuggestion.swift in Sources */,
 				9186A9CBEAE3172BC2EFC7E6 /* Radius.swift in Sources */,
 				8AB289BB8CEE50F951792FE5 /* RankBadge.swift in Sources */,
 				FC3EDC8BCF3CAA1F23383EFB /* RankEngine.swift in Sources */,
