@@ -10,6 +10,17 @@ enum SetRowLayout {
     static let toggle: CGFloat = 36
 }
 
+/// `.dashed` markiert eine Zeile als "nicht der normale Arbeitssatz" -
+/// aktuell für Warm-up-Sätze in `ActiveExerciseCard` (gestrichelt, gedämpft,
+/// eigene, unabhängige Nummerierung, siehe `ExerciseSection.warmupSets`) und
+/// künftig für die "angehängte" Übung eines Supersatzes wiederverwendet.
+/// Bewusst kein neuer Farbwert - nur Fläche/Rahmen ändern sich, damit das
+/// Ein-Akzentfarben-Prinzip (`DesignSystem/Colors.swift`) gewahrt bleibt.
+enum SetRowStyle {
+    case solid
+    case dashed
+}
+
 /// Eine Satz-Zeile in der aktiven Übungskarte: Set-Nummer-Badge (bleibt beim
 /// Abhaken unverändert sichtbar), Reps-/Gewicht-Felder die als inline
 /// tap-to-edit-Zahlenfelder mit Quick-Adjust-Tastatur-Toolbar funktionieren
@@ -33,14 +44,45 @@ struct SetRow: View {
     var previousSet: PreviousSetSnapshot? = nil
     /// Durchgereicht an beide `SetValueField`s, siehe deren Doc-Kommentar.
     var onFieldFocusChange: ((Bool) -> Void)? = nil
+    /// Siehe `SetRowStyle`. Default `.solid` hält bestehende Aufrufer/
+    /// Previews unverändert.
+    var style: SetRowStyle = .solid
+
+    private var badgeSize: CGFloat { style == .dashed ? 24 : SetRowLayout.badge }
+    private var toggleSize: CGFloat { style == .dashed ? 28 : SetRowLayout.toggle }
+
+    private var badgeFillColor: Color {
+        if setLog.isCompleted { return DSColor.accent }
+        return style == .dashed ? .clear : DSColor.surfaceCard2
+    }
+
+    private var badgeTextColor: Color {
+        if setLog.isCompleted { return DSColor.textOnInvert }
+        return style == .dashed ? DSColor.textTertiary : DSColor.textSecondary
+    }
+
+    private var valueTextColor: Color {
+        if setLog.isCompleted { return DSColor.textSecondary }
+        return style == .dashed ? DSColor.textSecondary : DSColor.textPrimary
+    }
+
+    private var rowBackground: Color {
+        guard style == .solid else { return .clear }
+        return setLog.isCompleted ? DSColor.accentTrack.opacity(0.4) : DSColor.surfaceCard2
+    }
 
     var body: some View {
         HStack(spacing: DSSpacing.stackGap) {
             Text("\(setLog.setIndex + 1)")
                 .font(DSFont.label)
-                .foregroundStyle(setLog.isCompleted ? DSColor.textOnInvert : DSColor.textSecondary)
-                .frame(width: SetRowLayout.badge, height: SetRowLayout.badge)
-                .background(setLog.isCompleted ? DSColor.accent : DSColor.surfaceCard2)
+                .foregroundStyle(badgeTextColor)
+                .frame(width: badgeSize, height: badgeSize)
+                .background(badgeFillColor)
+                .overlay {
+                    if style == .dashed && !setLog.isCompleted {
+                        Circle().strokeBorder(DSColor.borderStrong, lineWidth: 1.2)
+                    }
+                }
                 .clipShape(Circle())
                 .accessibilityHidden(true)
 
@@ -70,7 +112,7 @@ struct SetRow: View {
                 .frame(minWidth: SetRowLayout.weightMin)
             }
             .font(DSFont.body)
-            .foregroundStyle(setLog.isCompleted ? DSColor.textSecondary : DSColor.textPrimary)
+            .foregroundStyle(valueTextColor)
             .frame(maxWidth: .infinity, alignment: .center)
 
             Button(action: onToggle) {
@@ -86,7 +128,7 @@ struct SetRow: View {
                             .foregroundStyle(DSColor.textOnInvert)
                     }
                 }
-                .frame(width: SetRowLayout.toggle, height: SetRowLayout.toggle)
+                .frame(width: toggleSize, height: toggleSize)
                 .frame(minWidth: DSSpacing.tapMin, minHeight: DSSpacing.tapMin)
                 .contentShape(Rectangle())
             }
@@ -103,7 +145,13 @@ struct SetRow: View {
         }
         .padding(.horizontal, DSSpacing.s12)
         .padding(.vertical, DSSpacing.s12)
-        .background(setLog.isCompleted ? DSColor.accentTrack.opacity(0.4) : DSColor.surfaceCard2)
+        .background(rowBackground)
+        .overlay {
+            if style == .dashed {
+                RoundedRectangle(cornerRadius: DSRadius.tile, style: .continuous)
+                    .strokeBorder(DSColor.borderStrong, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: DSRadius.tile, style: .continuous))
         .animation(DSMotion.fast, value: setLog.isCompleted)
     }
