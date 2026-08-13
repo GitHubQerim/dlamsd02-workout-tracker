@@ -8,7 +8,7 @@ struct WorkoutTrackerApp: App {
     init() {
         do {
             modelContainer = try ModelContainer(
-                for: Schema(versionedSchema: SchemaV1.self),
+                for: Schema(versionedSchema: SchemaV2.self),
                 migrationPlan: WorkoutTrackerMigrationPlan.self
             )
         } catch {

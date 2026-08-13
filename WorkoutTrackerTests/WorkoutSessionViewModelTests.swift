@@ -478,4 +478,172 @@ struct WorkoutSessionViewModelTests {
 
         #expect(viewModel.lastRankReconciliation != nil)
     }
+
+    // MARK: - Warm-up-Sätze
+
+    @Test func addSetWithIsWarmupUsesIndependentSetIndexSequence() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, isWarmup: true)
+        viewModel.addSet(for: exercise, isWarmup: true)
+        viewModel.addSet(for: exercise)
+
+        let warmups = viewModel.session.setLogs.filter(\.isWarmup).sorted { $0.setIndex < $1.setIndex }
+        let workSets = viewModel.session.setLogs.filter { !$0.isWarmup }
+
+        #expect(warmups.map(\.setIndex) == [0, 1], "Warm-up-Zählung startet unabhängig bei 0")
+        #expect(workSets.map(\.setIndex) == [0], "Ein hinzugefügter Warm-up-Satz darf die Arbeitssatz-Nummerierung nicht verschieben")
+    }
+
+    @Test func exerciseSectionSplitsWarmupAndWorkSets() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, isWarmup: true)
+        viewModel.addSet(for: exercise)
+        viewModel.addSet(for: exercise)
+
+        let section = viewModel.exerciseSections.first { $0.name == "Kniebeuge" }
+        #expect(section?.warmupSets.count == 1)
+        #expect(section?.workSets.count == 2)
+        #expect(section?.sets.count == 3, "sets bleibt die kombinierte Liste")
+    }
+
+    @Test func toggleSetCompletionSkipsRestTimerForWarmupSet() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        // Zweiter (Arbeits-)Satz, damit isWorkoutComplete beim Warm-up-Toggle
+        // nicht ohnehin schon true wäre - der Test soll gezielt die
+        // Warm-up-Sonderregel prüfen, nicht die Session-Ende-Regel.
+        viewModel.addSet(for: exercise, isWarmup: true)
+        viewModel.addSet(for: exercise)
+        let warmupSet = viewModel.session.setLogs.first { $0.isWarmup }!
+
+        viewModel.toggleSetCompletion(warmupSet)
+
+        #expect(warmupSet.isCompleted == true)
+        #expect(viewModel.isRestTimerRunning == false, "Warm-up-Sätze pausieren nie")
+    }
+
+    @Test func isWorkoutCompleteIgnoresOpenWarmupSets() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, isWarmup: true)
+        viewModel.addSet(for: exercise)
+        let workSet = viewModel.session.setLogs.first { !$0.isWarmup }!
+
+        viewModel.toggleSetCompletion(workSet)
+
+        #expect(viewModel.isWorkoutComplete == true, "Ein offener Warm-up-Satz darf den Session-Abschluss nicht blockieren")
+    }
+
+    @Test func isExerciseCompleteIgnoresOpenWarmupSets() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, isWarmup: true)
+        viewModel.addSet(for: exercise)
+        let workSet = viewModel.session.setLogs.first { !$0.isWarmup }!
+
+        viewModel.toggleSetCompletion(workSet)
+
+        #expect(viewModel.isExerciseComplete("Kniebeuge") == true)
+    }
+
+    @Test func nextIncompleteSetIDIgnoresWarmupSets() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, isWarmup: true)
+        viewModel.addSet(for: exercise)
+        let workSet = viewModel.session.setLogs.first { !$0.isWarmup }!
+
+        #expect(viewModel.nextIncompleteSetID(in: "Kniebeuge") == workSet.persistentModelID)
+    }
+
+    @Test func previousAttemptExcludesWarmupSets() async throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let pastViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: MockHealthKitService())
+        pastViewModel.addSet(for: exercise, isWarmup: true, suggestedReps: 12, suggestedWeightKg: 20)
+        pastViewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 60)
+        await pastViewModel.finishSession()
+
+        let currentViewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft, healthKitService: MockHealthKitService())
+
+        let attempt = currentViewModel.previousAttempt(for: "Kniebeuge")
+        #expect(attempt?.sets.count == 1, "Nur der Arbeitssatz darf im Vergleich auftauchen")
+        #expect(attempt?.sets.first?.weightKg == 60)
+    }
+
+    @Test func deleteSetRenumbersRemainingSetsOfSameKindContiguously() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 40) // setIndex 0
+        viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 50) // setIndex 1
+        viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 60) // setIndex 2
+        let middleSet = viewModel.session.setLogs.first { $0.weightKg == 50 }!
+
+        viewModel.deleteSet(middleSet)
+
+        let remaining = viewModel.session.setLogs.sorted { $0.setIndex < $1.setIndex }
+        #expect(remaining.map(\.setIndex) == [0, 1], "Nach dem Löschen müssen die verbleibenden Sätze lückenlos 0..n-1 sein")
+        #expect(remaining.map(\.weightKg) == [40, 60])
+
+        // Regressions-Check für den eigentlichen Bug, den die Nachnummerierung
+        // verhindert: ohne sie würde ein neu hinzugefügter Satz denselben
+        // setIndex wie ein Bestandssatz bekommen (existingCount == 2 träfe
+        // sonst auf einen bereits vorhandenen setIndex 2).
+        viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 70)
+        let allIndexes = viewModel.session.setLogs.map(\.setIndex).sorted()
+        #expect(allIndexes == [0, 1, 2], "Kein doppelt vergebener setIndex nach Löschen + erneutem Hinzufügen")
+    }
+
+    @Test func deleteSetKeepsWarmupAndWorkSetNumberingIndependent() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Kniebeuge")
+        context.insert(exercise)
+
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: nil, activityType: .kraft)
+        viewModel.addSet(for: exercise, isWarmup: true, suggestedReps: 12, suggestedWeightKg: 20)
+        viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 40)
+        viewModel.addSet(for: exercise, suggestedReps: 8, suggestedWeightKg: 50)
+        let workSetToDelete = viewModel.session.setLogs.first { !$0.isWarmup && $0.weightKg == 40 }!
+
+        viewModel.deleteSet(workSetToDelete)
+
+        let warmup = viewModel.session.setLogs.first { $0.isWarmup }
+        #expect(warmup?.setIndex == 0, "Löschen eines Arbeitssatzes darf die Warm-up-Nummerierung nicht verschieben")
+        let remainingWorkSet = viewModel.session.setLogs.first { !$0.isWarmup }
+        #expect(remainingWorkSet?.setIndex == 0)
+    }
 }

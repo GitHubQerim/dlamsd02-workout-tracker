@@ -12,6 +12,15 @@ struct ExerciseSection: Identifiable {
     let sets: [SetLog]
     let target: PlannedExercise?
     var id: String { name }
+
+    /// Warm-up-Sätze - eigene, unabhängige `setIndex`-Zählung (siehe
+    /// `WorkoutSessionViewModel.addSet(for:isWarmup:)`), werden in der
+    /// eigenen "Aufwärmen"-Sektion gerendert, nicht in der normalen Liste.
+    var warmupSets: [SetLog] { sets.filter(\.isWarmup) }
+    /// Arbeitssätze - alles, was NICHT Warm-up ist. Fast alle bestehenden
+    /// Status-Berechnungen (Fortschritt, "als nächstes dran", Live Activity)
+    /// zählen bewusst nur diese, offene Warm-ups sollen sie nie blockieren.
+    var workSets: [SetLog] { sets.filter { !$0.isWarmup } }
 }
 
 /// Wertetyp-Snapshot eines Satzes aus einer vergangenen Session - bewusst
@@ -197,33 +206,36 @@ final class WorkoutSessionViewModel: Identifiable {
     /// offenen Satz, sonst (alles erledigt) die letzte Übung, damit nie
     /// "nichts" aufgeklappt ist.
     var firstIncompleteExerciseName: String? {
-        exerciseSections.first { $0.sets.contains { !$0.isCompleted } }?.name
+        exerciseSections.first { $0.workSets.contains { !$0.isCompleted } }?.name
             ?? exerciseSections.last?.name
     }
 
     func isExerciseComplete(_ name: String) -> Bool {
         guard let section = exerciseSections.first(where: { $0.name == name }) else { return false }
-        return !section.sets.isEmpty && section.sets.allSatisfy(\.isCompleted)
+        return !section.workSets.isEmpty && section.workSets.allSatisfy(\.isCompleted)
     }
 
     /// Ob wirklich alle Sätze (Kraft) bzw. Segmente (Cardio) der Session
     /// abgehakt sind - Grundlage für den "Workout abschließen"-Zustand der
-    /// permanenten Bottom-Pille (`WorkoutSessionView.finishBar`).
+    /// permanenten Bottom-Pille (`WorkoutSessionView.finishBar`). Offene
+    /// Warm-up-Sätze blockieren den Abschluss nicht - nur Arbeitssätze zählen.
     var isWorkoutComplete: Bool {
         if session.activityType.usesSetLogs {
-            !session.setLogs.isEmpty && session.setLogs.allSatisfy(\.isCompleted)
+            let workSets = session.setLogs.filter { !$0.isWarmup }
+            return !workSets.isEmpty && workSets.allSatisfy(\.isCompleted)
         } else {
-            !session.segmentLogs.isEmpty && session.segmentLogs.allSatisfy(\.isCompleted)
+            return !session.segmentLogs.isEmpty && session.segmentLogs.allSatisfy(\.isCompleted)
         }
     }
 
     /// Nächster offener Satz einer Übung (erster mit `isCompleted == false`,
     /// Reihenfolge über `setIndex`) - Grundlage für den "als nächstes dran"-
-    /// Indikator in der aktiven Übungskarte.
+    /// Indikator in der aktiven Übungskarte. Nur Arbeitssätze - Warm-ups
+    /// haben keinen eigenen "als nächstes dran"-Indikator.
     func nextIncompleteSetID(in exerciseName: String) -> PersistentIdentifier? {
         exerciseSections
             .first(where: { $0.name == exerciseName })?
-            .sets.first(where: { !$0.isCompleted })?
+            .workSets.first(where: { !$0.isCompleted })?
             .persistentModelID
     }
 
@@ -240,7 +252,7 @@ final class WorkoutSessionViewModel: Identifiable {
         ) else { return nil }
 
         let matchingSets = candidate.setLogs
-            .filter { $0.exerciseName == exerciseName }
+            .filter { $0.exerciseName == exerciseName && !$0.isWarmup }
             .sorted { $0.setIndex < $1.setIndex }
         return PreviousAttempt(
             date: candidate.startDate,
@@ -257,10 +269,12 @@ final class WorkoutSessionViewModel: Identifiable {
         if setLog.isCompleted {
             // startRestTimer() aktualisiert die Live Activity bereits selbst -
             // sonst genau einmal hier, nie beide (kein doppelter Activity.update).
-            // War das der letzte offene Satz der gesamten Session, gibt es
-            // nichts mehr, wonach pausiert werden müsste - dann direkt
+            // Warm-up-Sätze pausieren nie - der Punkt eines Warm-ups ist,
+            // ohne volle Erholung direkt weiterzumachen. War es (bei einem
+            // Arbeitssatz) der letzte offene Satz der gesamten Session, gibt
+            // es nichts mehr, wonach pausiert werden müsste - dann direkt
             // finalisieren statt den Pausentimer zu öffnen.
-            if isWorkoutComplete {
+            if setLog.isWarmup || isWorkoutComplete {
                 updateLiveActivity()
             } else {
                 startRestTimer()
@@ -278,18 +292,47 @@ final class WorkoutSessionViewModel: Identifiable {
     }
 
     /// Fügt einen weiteren Satz hinzu - sowohl für geplante als auch für
-    /// im freien Training ad-hoc gewählte Übungen nutzbar.
-    func addSet(for exercise: Exercise, suggestedReps: Int? = nil, suggestedWeightKg: Double? = nil) {
-        let existingCount = session.setLogs.filter { $0.exerciseName == exercise.name }.count
+    /// im freien Training ad-hoc gewählte Übungen nutzbar. Warm-up- und
+    /// Arbeitssätze zählen unabhängig voneinander (jeweils bei 0 beginnend),
+    /// damit ein hinzugefügter Warm-up-Satz nie die Nummerierung der
+    /// Arbeitssätze verschiebt (oder umgekehrt).
+    func addSet(for exercise: Exercise, isWarmup: Bool = false, suggestedReps: Int? = nil, suggestedWeightKg: Double? = nil) {
+        let existingCount = session.setLogs
+            .filter { $0.exerciseName == exercise.name && $0.isWarmup == isWarmup }
+            .count
         let setLog = SetLog(
             setIndex: existingCount,
             exercise: exercise,
             reps: suggestedReps ?? 0,
-            weightKg: suggestedWeightKg ?? 0
+            weightKg: suggestedWeightKg ?? 0,
+            isWarmup: isWarmup
         )
         setLog.session = session
         context.insert(setLog)
         persist()
+    }
+
+    /// Entfernt einen Satz - Gegenstück zu `addSet(for:)`. Nummeriert die
+    /// verbleibenden Sätze DERSELBEN Art (Warm-up bleibt von Arbeitssätzen
+    /// getrennt, siehe `addSet`) lückenlos neu durch: `addSet` leitet den
+    /// nächsten `setIndex` aus der reinen Anzahl her, ein Loch in der Mitte
+    /// (z.B. nach Löschen von Satz 2 von 3) würde sonst beim nächsten
+    /// Hinzufügen zu einem doppelt vergebenen `setIndex` führen.
+    func deleteSet(_ setLog: SetLog) {
+        // Reihenfolge wichtig: "verbleibende" Sätze per Ausschluss der zu
+        // löschenden ID VOR dem eigentlichen context.delete() bestimmen -
+        // session.setLogs spiegelt ein context.delete() nicht zuverlässig
+        // synchron genug wider, um direkt danach gefahrlos danach zu filtern.
+        let targetID = setLog.persistentModelID
+        let remaining = session.setLogs
+            .filter { $0.exerciseName == setLog.exerciseName && $0.isWarmup == setLog.isWarmup && $0.persistentModelID != targetID }
+            .sorted { $0.setIndex < $1.setIndex }
+        for (index, log) in remaining.enumerated() {
+            log.setIndex = index
+        }
+        context.delete(setLog)
+        persist()
+        updateLiveActivity()
     }
 
     func startRestTimer() {
@@ -354,7 +397,7 @@ final class WorkoutSessionViewModel: Identifiable {
         let sections = exerciseSections
         let activeExerciseName = firstIncompleteExerciseName
         let activeSection = sections.first { $0.name == activeExerciseName }
-        let activeSet = activeSection?.sets.first { !$0.isCompleted }
+        let activeSet = activeSection?.workSets.first { !$0.isCompleted }
 
         return WorkoutSessionActivityAttributes.ContentState(
             workoutName: displayTitle,
@@ -362,7 +405,7 @@ final class WorkoutSessionViewModel: Identifiable {
             currentSetNumber: activeSet.map { $0.setIndex + 1 },
             currentSetReps: activeSet?.reps,
             currentSetWeight: activeSet?.weightKg,
-            currentExerciseSetCompletionFlags: activeSection?.sets.map(\.isCompleted) ?? [],
+            currentExerciseSetCompletionFlags: activeSection?.workSets.map(\.isCompleted) ?? [],
             restTimerStartDate: restTimerStartDate,
             restTimerDuration: isRestTimerRunning ? restTimerDuration : nil
         )
@@ -436,7 +479,7 @@ final class WorkoutSessionViewModel: Identifiable {
         // "keine Schätzung" statt eines geratenen Werts, siehe
         // `EnergyEstimator`.
         let totalVolumeKg = session.setLogs
-            .filter(\.isCompleted)
+            .filter { $0.isCompleted && !$0.isWarmup }
             .reduce(0.0) { $0 + Double($1.reps) * $1.weightKg }
         let bodyWeightKg = try? await healthKitService.fetchLatestBodyWeightKg()
         let activeEnergyKcal = bodyWeightKg.flatMap {

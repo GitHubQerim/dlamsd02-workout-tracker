@@ -30,8 +30,10 @@ enum ChallengeInsights {
     /// - gemeinsame Formel für `topVolumeExercises` und den Überlastungs-
     /// Bonus des Rang-Systems (ADR 0014, `WorkoutSession.updateRankProgress`),
     /// damit "was zählt als Volumen" nur an einer Stelle definiert ist.
+    /// Warm-up-Sätze zählen bewusst nie mit - weder in die Analytics noch in
+    /// den Rang-Fortschritt.
     static func volumeByExercise(_ setLogs: [SetLog]) -> [String: Double] {
-        Dictionary(grouping: setLogs, by: \.exerciseName)
+        Dictionary(grouping: setLogs.filter { !$0.isWarmup }, by: \.exerciseName)
             .mapValues { logs in logs.reduce(0) { $0 + Double($1.reps) * $1.weightKg } }
     }
 
