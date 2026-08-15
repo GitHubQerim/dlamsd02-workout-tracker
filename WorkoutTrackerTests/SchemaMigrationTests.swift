@@ -3,27 +3,28 @@ import SwiftData
 import Foundation
 @testable import WorkoutTracker
 
-/// Erste echte Schema-Migration dieses Projekts (V1 -> V2, `SetLog.isWarmup`).
+/// Schema-Migrationen dieses Projekts (V1 -> V2 `SetLog.isWarmup`, V2 -> V3
+/// `PlannedExercise.supersetGroupID`).
 ///
-/// Bewusst KEIN Test, der `SchemaV1.SetLog` und `SchemaV2.SetLog` (= `SetLog`)
-/// im selben Prozess tatsächlich instanziiert, um eine echte V1->V2-Migration
-/// nachzustellen: beide Typen heißen intern identisch "SetLog" und teilen
-/// sich dieselbe `@Relationship(inverse:)`-Bindung auf dem unveränderten,
-/// geteilten `Exercise`-Typ - SwiftData wirft dabei einen harten,
-/// nicht abfangbaren Fatal Error ("KeyPath relates to SetLog but I was asked
-/// to cast it to SetLog"), sobald beide Typen im selben Prozess über diese
-/// geteilte Relationship benutzt werden (verifiziert, reproduzierbar). Ein
-/// solcher Test würde die komplette restliche Suite mit abschießen statt nur
-/// selbst fehlzuschlagen. Das eigentliche V1->V2-Verhalten muss deshalb
-/// manuell auf einem Gerät/Simulator mit echten Bestandsdaten verifiziert
-/// werden (siehe PR-Beschreibung) - dieser Test deckt nur strukturell ab,
-/// dass der Migrationsplan korrekt aufgebaut ist und ein frischer Store
-/// unter dem aktuellen Schema klaglos funktioniert.
+/// Bewusst KEIN Test, der zwei gleichnamige Versionen desselben Modelltyps
+/// (z.B. `SchemaV1.SetLog` und `SchemaV2.SetLog` = `SetLog`) im selben
+/// Prozess tatsächlich instanziiert, um eine echte Migration nachzustellen:
+/// beide teilen sich dieselbe `@Relationship(inverse:)`-Bindung auf einem
+/// unveränderten, geteilten Typ (z.B. `Exercise`) - SwiftData wirft dabei
+/// einen harten, nicht abfangbaren Fatal Error ("KeyPath relates to X but I
+/// was asked to cast it to X"), sobald beide Versionen im selben Prozess
+/// über diese geteilte Relationship benutzt werden (verifiziert,
+/// reproduzierbar). Ein solcher Test würde die komplette restliche Suite mit
+/// abschießen statt nur selbst fehlzuschlagen. Das eigentliche Migrations-
+/// verhalten muss deshalb manuell auf einem Gerät/Simulator mit echten
+/// Bestandsdaten verifiziert werden (siehe PR-Beschreibung) - diese Tests
+/// decken nur strukturell ab, dass der Migrationsplan korrekt aufgebaut ist
+/// und ein frischer Store unter dem jeweiligen Schema klaglos funktioniert.
 @MainActor
 struct SchemaMigrationTests {
-    @Test func migrationPlanDeclaresExactlyOneLightweightStageFromV1ToV2() throws {
-        #expect(WorkoutTrackerMigrationPlan.schemas.count == 2)
-        #expect(WorkoutTrackerMigrationPlan.stages.count == 1)
+    @Test func migrationPlanDeclaresTwoLightweightStagesV1ToV3() throws {
+        #expect(WorkoutTrackerMigrationPlan.schemas.count == 3)
+        #expect(WorkoutTrackerMigrationPlan.stages.count == 2)
     }
 
     @Test func freshStoreOnCurrentSchemaOpensAndDefaultsIsWarmupToFalse() throws {
@@ -33,7 +34,7 @@ struct SchemaMigrationTests {
         defer { try? FileManager.default.removeItem(at: storeURL) }
 
         let container = try ModelContainer(
-            for: Schema(versionedSchema: SchemaV2.self),
+            for: Schema(versionedSchema: SchemaV3.self),
             migrationPlan: WorkoutTrackerMigrationPlan.self,
             configurations: ModelConfiguration(url: storeURL)
         )
@@ -47,5 +48,31 @@ struct SchemaMigrationTests {
         let fetched = try context.fetch(FetchDescriptor<SetLog>())
         #expect(fetched.count == 1)
         #expect(fetched.first?.isWarmup == false)
+    }
+
+    @Test func freshStoreOnCurrentSchemaDefaultsSupersetGroupIDToNil() throws {
+        let storeURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("store")
+        defer { try? FileManager.default.removeItem(at: storeURL) }
+
+        let container = try ModelContainer(
+            for: Schema(versionedSchema: SchemaV3.self),
+            migrationPlan: WorkoutTrackerMigrationPlan.self,
+            configurations: ModelConfiguration(url: storeURL)
+        )
+        let context = container.mainContext
+        let exercise = Exercise(name: "Bankdrücken")
+        context.insert(exercise)
+        let plan = Workout(name: "Testplan", activityType: .kraft)
+        context.insert(plan)
+        let plannedExercise = PlannedExercise(orderIndex: 0, exercise: exercise)
+        plannedExercise.plan = plan
+        context.insert(plannedExercise)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<PlannedExercise>())
+        #expect(fetched.count == 1)
+        #expect(fetched.first?.supersetGroupID == nil)
     }
 }

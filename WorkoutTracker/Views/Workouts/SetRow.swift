@@ -48,8 +48,13 @@ struct SetRow: View {
     /// Previews unverändert.
     var style: SetRowStyle = .solid
 
-    private var badgeSize: CGFloat { style == .dashed ? 24 : SetRowLayout.badge }
-    private var toggleSize: CGFloat { style == .dashed ? 28 : SetRowLayout.toggle }
+    // Bewusst GLEICHE Größe für .dashed und .solid (kein separates,
+    // kleineres Maß mehr) - ein Größenunterschied ließ verkettete
+    // Zeilenpaare (Superset) optisch asymmetrisch/schief wirken, weil die
+    // Kette zwischen unterschiedlich hohen Zeilen nicht sauber zentriert
+    // lag. Nur Fläche/Rahmen unterscheiden .dashed noch von .solid.
+    private var badgeSize: CGFloat { SetRowLayout.badge }
+    private var toggleSize: CGFloat { SetRowLayout.toggle }
 
     private var badgeFillColor: Color {
         if setLog.isCompleted { return DSColor.accent }
@@ -66,9 +71,14 @@ struct SetRow: View {
         return style == .dashed ? DSColor.textSecondary : DSColor.textPrimary
     }
 
+    // Auch `.dashed` bekommt eine opake Fläche (nur eine Stufe heller/
+    // gedämpfter als `.solid`, statt ganz `.clear`) - sonst hat sie nichts,
+    // um eine dahinterliegende Kette (siehe `MergedExerciseCard.
+    // miniChainConnector`) abzudecken, und die Kette "schimmert" sichtbar
+    // durch die gestrichelte Zeile statt darunter zu verschwinden.
     private var rowBackground: Color {
-        guard style == .solid else { return .clear }
-        return setLog.isCompleted ? DSColor.accentTrack.opacity(0.4) : DSColor.surfaceCard2
+        if setLog.isCompleted { return DSColor.accentTrack.opacity(0.4) }
+        return style == .dashed ? DSColor.surfaceCard : DSColor.surfaceCard2
     }
 
     var body: some View {

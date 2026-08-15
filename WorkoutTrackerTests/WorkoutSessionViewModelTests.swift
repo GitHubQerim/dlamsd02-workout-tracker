@@ -600,6 +600,158 @@ struct WorkoutSessionViewModelTests {
         #expect(attempt?.sets.first?.weightKg == 60)
     }
 
+    // MARK: - Superset
+
+    /// Baut eine geplante Session mit `count` Übungen (je `setsPerExercise`
+    /// Sätzen, `orderIndex` in Aufrufreihenfolge) - gemeinsames Setup für
+    /// die Superset-Tests, die alle mindestens zwei Übungen desselben Plans
+    /// brauchen (`linkSuperset` funktioniert nur über `session.plan`).
+    private func makePlannedSession(
+        context: ModelContext,
+        exerciseNames: [String],
+        setsPerExercise: Int = 1
+    ) -> WorkoutSessionViewModel {
+        let plan = Workout(name: "Testplan", activityType: .kraft)
+        context.insert(plan)
+        for (index, name) in exerciseNames.enumerated() {
+            let exercise = Exercise(name: name)
+            context.insert(exercise)
+            let plannedExercise = PlannedExercise(orderIndex: index, exercise: exercise, targetSets: setsPerExercise, targetReps: 8, targetWeightKg: 40)
+            plannedExercise.plan = plan
+            context.insert(plannedExercise)
+        }
+        try? context.save()
+        return WorkoutSessionViewModel.start(context: context, plan: plan, activityType: .kraft)
+    }
+
+    @Test func linkSupersetSetsMatchingGroupIDOnBothPlannedExercises() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let viewModel = makePlannedSession(context: context, exerciseNames: ["A", "B"])
+
+        viewModel.linkSuperset(attachedExerciseName: "B", toPrimaryExerciseName: "A")
+
+        let plannedA = viewModel.session.plan!.plannedExercises.first { $0.exerciseName == "A" }!
+        let plannedB = viewModel.session.plan!.plannedExercises.first { $0.exerciseName == "B" }!
+        #expect(plannedA.supersetGroupID != nil)
+        #expect(plannedA.supersetGroupID == plannedB.supersetGroupID)
+    }
+
+    @Test func linkSupersetReplacesPreviousPartnerWithoutOrphaningIt() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let viewModel = makePlannedSession(context: context, exerciseNames: ["A", "B", "C"])
+        viewModel.linkSuperset(attachedExerciseName: "B", toPrimaryExerciseName: "A")
+
+        viewModel.linkSuperset(attachedExerciseName: "C", toPrimaryExerciseName: "A")
+
+        let plan = viewModel.session.plan!
+        let plannedA = plan.plannedExercises.first { $0.exerciseName == "A" }!
+        let plannedB = plan.plannedExercises.first { $0.exerciseName == "B" }!
+        let plannedC = plan.plannedExercises.first { $0.exerciseName == "C" }!
+        #expect(plannedB.supersetGroupID == nil, "Alte Partnerin darf nicht mit einer verwaisten Gruppen-ID zurückbleiben")
+        #expect(plannedA.supersetGroupID != nil)
+        #expect(plannedA.supersetGroupID == plannedC.supersetGroupID)
+    }
+
+    @Test func unlinkSupersetClearsGroupIDOnBothSidesEvenThoughOnlyOneWasTargeted() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let viewModel = makePlannedSession(context: context, exerciseNames: ["A", "B"])
+        viewModel.linkSuperset(attachedExerciseName: "B", toPrimaryExerciseName: "A")
+
+        viewModel.unlinkSuperset(exerciseName: "A")
+
+        let plan = viewModel.session.plan!
+        let plannedA = plan.plannedExercises.first { $0.exerciseName == "A" }!
+        let plannedB = plan.plannedExercises.first { $0.exerciseName == "B" }!
+        #expect(plannedA.supersetGroupID == nil)
+        #expect(plannedB.supersetGroupID == nil, "Eine Gruppe mit nur einem verbleibenden Mitglied ist kein Superset mehr")
+    }
+
+    @Test func sessionRowsGroupsLinkedExercisesIntoSupersetRow() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let viewModel = makePlannedSession(context: context, exerciseNames: ["A", "B", "C"])
+
+        viewModel.linkSuperset(attachedExerciseName: "B", toPrimaryExerciseName: "A")
+
+        let rows = viewModel.sessionRows
+        #expect(rows.count == 2, "A+B verschmelzen zu einer Zeile, C bleibt eigenständig")
+        guard case .superset(let primary, let attached) = rows.first(where: { $0.id == "A" }) else {
+            Issue.record("Erwartete .superset-Zeile für A wurde nicht gefunden")
+            return
+        }
+        #expect(primary.name == "A")
+        #expect(attached.name == "B")
+        guard case .single(let soloSection) = rows.first(where: { $0.id == "C" }) else {
+            Issue.record("Erwartete .single-Zeile für C wurde nicht gefunden")
+            return
+        }
+        #expect(soloSection.name == "C")
+    }
+
+    @Test func toggleSetCompletionWaitsForSupersetPartnerBeforeStartingRestTimer() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        // Dritte, unverknüpfte Übung mit offenem Satz - sonst wäre nach
+        // A+B die GESAMTE Session fertig, und die bestehende "letzter
+        // offener Satz -> kein Timer, direkt abschließen"-Regel würde
+        // greifen statt der hier zu testenden Superset-Gating-Regel.
+        let viewModel = makePlannedSession(context: context, exerciseNames: ["A", "B", "C"])
+        viewModel.linkSuperset(attachedExerciseName: "B", toPrimaryExerciseName: "A")
+
+        let setA = viewModel.session.setLogs.first { $0.exerciseName == "A" }!
+        let setB = viewModel.session.setLogs.first { $0.exerciseName == "B" }!
+
+        viewModel.toggleSetCompletion(setA)
+        #expect(viewModel.isRestTimerRunning == false, "Wartet auf den Partner-Satz derselben Runde")
+
+        viewModel.toggleSetCompletion(setB)
+        #expect(viewModel.isRestTimerRunning == true, "Beide Hälften der Runde sind jetzt fertig")
+    }
+
+    @Test func toggleSetCompletionIgnoresMismatchedRoundWithoutPartner() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        // A hat 2 Sätze, B nur 1 - bewusst kein Schutz gegen ungleiche
+        // Satzanzahl (siehe Feature-Plan), der überzählige Satz wartet
+        // einfach nicht auf einen Partner.
+        let plan = Workout(name: "Testplan", activityType: .kraft)
+        context.insert(plan)
+        let exerciseA = Exercise(name: "A")
+        context.insert(exerciseA)
+        let plannedA = PlannedExercise(orderIndex: 0, exercise: exerciseA, targetSets: 2, targetReps: 8, targetWeightKg: 40)
+        plannedA.plan = plan
+        context.insert(plannedA)
+        let exerciseB = Exercise(name: "B")
+        context.insert(exerciseB)
+        let plannedB = PlannedExercise(orderIndex: 1, exercise: exerciseB, targetSets: 1, targetReps: 8, targetWeightKg: 40)
+        plannedB.plan = plan
+        context.insert(plannedB)
+        // Dritte, unverknüpfte Übung mit offenem Satz - siehe Kommentar in
+        // toggleSetCompletionWaitsForSupersetPartnerBeforeStartingRestTimer.
+        let exerciseC = Exercise(name: "C")
+        context.insert(exerciseC)
+        let plannedC = PlannedExercise(orderIndex: 2, exercise: exerciseC, targetSets: 1, targetReps: 8, targetWeightKg: 40)
+        plannedC.plan = plan
+        context.insert(plannedC)
+        try context.save()
+        let viewModel = WorkoutSessionViewModel.start(context: context, plan: plan, activityType: .kraft)
+        viewModel.linkSuperset(attachedExerciseName: "B", toPrimaryExerciseName: "A")
+
+        let setsA = viewModel.session.setLogs.filter { $0.exerciseName == "A" }.sorted { $0.setIndex < $1.setIndex }
+        let setB = viewModel.session.setLogs.first { $0.exerciseName == "B" }!
+
+        viewModel.toggleSetCompletion(setsA[0])
+        #expect(viewModel.isRestTimerRunning == false, "setIndex 0 hat noch einen offenen Partner in B")
+        viewModel.toggleSetCompletion(setB)
+        viewModel.skipRestTimer()
+
+        viewModel.toggleSetCompletion(setsA[1])
+        #expect(viewModel.isRestTimerRunning == true, "setIndex 1 hat keinen Partner in B mehr - normale Pause statt endlosem Warten")
+    }
+
     @Test func deleteSetRenumbersRemainingSetsOfSameKindContiguously() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext

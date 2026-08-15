@@ -10,6 +10,13 @@ struct ExercisePickerView: View {
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
 
     let onSelect: (Exercise) -> Void
+    /// Schränkt die Auswahl auf einen bekannten Namens-Pool ein (z.B. die
+    /// übrigen Übungen desselben Plans für die Superset-Partnerwahl) statt
+    /// des vollen Katalogs. `nil` (Default) hält das bestehende Verhalten
+    /// für "Übung hinzufügen" unverändert. Bei aktiver Einschränkung ergibt
+    /// "Eigene Übung anlegen" keinen Sinn (die neue Übung wäre nie Teil des
+    /// erlaubten Pools) und wird ausgeblendet.
+    var allowedExerciseNames: Set<String>? = nil
 
     @State private var selectedMuscleGroup: MuscleGroup?
     @State private var isPresentingNewExercise = false
@@ -18,8 +25,9 @@ struct ExercisePickerView: View {
     @State private var newExerciseValidationMessage: String?
 
     private var filteredExercises: [Exercise] {
-        guard let selectedMuscleGroup else { return exercises }
-        return exercises.filter { $0.muscleGroup == selectedMuscleGroup }
+        let scoped = allowedExerciseNames.map { names in exercises.filter { names.contains($0.name) } } ?? exercises
+        guard let selectedMuscleGroup else { return scoped }
+        return scoped.filter { $0.muscleGroup == selectedMuscleGroup }
     }
 
     var body: some View {
@@ -65,8 +73,10 @@ struct ExercisePickerView: View {
                         }
                     }
 
-                    DSButton(title: "Eigene Übung anlegen", icon: "info", variant: .outline, fullWidth: true) {
-                        isPresentingNewExercise = true
+                    if allowedExerciseNames == nil {
+                        DSButton(title: "Eigene Übung anlegen", icon: "info", variant: .outline, fullWidth: true) {
+                            isPresentingNewExercise = true
+                        }
                     }
                 }
             }

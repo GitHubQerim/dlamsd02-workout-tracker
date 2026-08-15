@@ -26,9 +26,19 @@ struct ActiveExerciseCard: View {
     /// `ConfirmRemovalModifier`. `SetLog` ist als `@Model`-Typ selbst
     /// `Hashable` (über `persistentModelID`), kein separates ID-Tracking nötig.
     @State private var pendingSetDeletion: SetLog?
+    /// Steuert das Übungs-Auswahl-Sheet für den Superset-Einstieg (siehe
+    /// `addSetBar`).
+    @State private var isPresentingSupersetPicker = false
 
     private var isComplete: Bool { viewModel.isExerciseComplete(section.name) }
     private var nextSetID: PersistentIdentifier? { viewModel.nextIncompleteSetID(in: section.name) }
+    /// Alle übrigen Übungen desselben Plans - der erlaubte Auswahl-Pool für
+    /// den Superset-Partner. `nil` im freien Training (kein Plan), das
+    /// blendet den "Superset"-Button in `addSetBar` ohnehin schon aus.
+    private var otherPlannedExerciseNames: Set<String> {
+        guard let plan = viewModel.session.plan else { return [] }
+        return Set(plan.plannedExercises.map(\.exerciseName)).subtracting([section.name])
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DSSpacing.stackGap) {
@@ -232,10 +242,17 @@ struct ActiveExerciseCard: View {
             }
             if viewModel.session.plan != nil {
                 AddSetBarButton(title: "Superset") {
-                    // TODO(Superset-Feature): Übungs-Auswahl-Sheet öffnen und
-                    // viewModel.linkSuperset(...) aufrufen, siehe Feature-Plan.
+                    isPresentingSupersetPicker = true
                 }
             }
+        }
+        .sheet(isPresented: $isPresentingSupersetPicker) {
+            ExercisePickerView(
+                onSelect: { partnerExercise in
+                    viewModel.linkSuperset(attachedExerciseName: partnerExercise.name, toPrimaryExerciseName: section.name)
+                },
+                allowedExerciseNames: otherPlannedExerciseNames
+            )
         }
     }
 }
@@ -249,8 +266,9 @@ struct ActiveExerciseCard: View {
 /// einfacher `VStack`/`ForEach` (wie vorher, bevor `List` eingeführt wurde)
 /// hatte dieses Problem nie - deshalb bleibt die Struktur, und nur eine
 /// eigene Drag-Geste ergänzt das Swipe-Verhalten, ohne `List`s Sizing-
-/// Eigenheiten zu erben.
-private struct SwipeToDeleteRow<Content: View>: View {
+/// Eigenheiten zu erben. Nicht `private` - auch von `MergedExerciseCard`
+/// genutzt (Superset-Sätze sind genauso swipe-löschbar).
+struct SwipeToDeleteRow<Content: View>: View {
     let onDelete: () -> Void
     @ViewBuilder let content: () -> Content
 
@@ -321,7 +339,8 @@ private struct SwipeToDeleteRow<Content: View>: View {
 /// `DSButton(variant: .outline)`, aber mit kleinerer Höhe/Schrift/Padding,
 /// damit drei davon nebeneinander in eine Zeile passen. `DSButton` bleibt
 /// bewusst unverändert (wird an vielen anderen Stellen in der App verwendet).
-private struct AddSetBarButton: View {
+/// Nicht `private` - auch von `MergedExerciseCard` genutzt.
+struct AddSetBarButton: View {
     private static let height: CGFloat = 38
 
     let title: String

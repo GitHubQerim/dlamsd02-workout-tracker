@@ -23,6 +23,23 @@ struct ExerciseSection: Identifiable {
     var workSets: [SetLog] { sets.filter { !$0.isWarmup } }
 }
 
+/// Eine Zeile im Session-Akkordeon: entweder eine einzelne Übung, oder zwei
+/// per Superset verknüpfte Übungen, die als eine verschmolzene Card
+/// gerendert werden (`MergedExerciseCard`). Nur für geplante Sessions
+/// relevant - `section.target` (und damit `supersetGroupID`) ist im freien
+/// Training immer `nil`, siehe `WorkoutSessionViewModel.sessionRows`.
+enum SessionRow: Identifiable {
+    case single(ExerciseSection)
+    case superset(primary: ExerciseSection, attached: ExerciseSection)
+
+    var id: String {
+        switch self {
+        case .single(let section): section.name
+        case .superset(let primary, _): primary.name
+        }
+    }
+}
+
 /// Wertetyp-Snapshot eines Satzes aus einer vergangenen Session - bewusst
 /// kein `@Model`-Handle, damit die Vergleichs-Anzeige fremde, abgeschlossene
 /// Sätze nie versehentlich editieren kann.
@@ -202,6 +219,27 @@ final class WorkoutSessionViewModel: Identifiable {
         }
     }
 
+    /// `exerciseSections`, aber per Superset verknüpfte Paare zu einer
+    /// einzigen `.superset`-Zeile zusammengefasst. `section.target?
+    /// .supersetGroupID` gated automatisch auf geplante Sessions - im
+    /// freien Training ist `target` immer `nil`, jede Übung bleibt `.single`.
+    var sessionRows: [SessionRow] {
+        let sections = exerciseSections
+        var rows: [SessionRow] = []
+        var consumed = Set<String>()
+        for section in sections {
+            guard !consumed.contains(section.name) else { continue }
+            if let groupID = section.target?.supersetGroupID,
+               let partner = sections.first(where: { $0.name != section.name && $0.target?.supersetGroupID == groupID }) {
+                rows.append(.superset(primary: section, attached: partner))
+                consumed.formUnion([section.name, partner.name])
+            } else {
+                rows.append(.single(section))
+            }
+        }
+        return rows
+    }
+
     /// Sinnvoller Akkordeon-Default: erste Übung mit mindestens einem
     /// offenen Satz, sonst (alles erledigt) die letzte Übung, damit nie
     /// "nichts" aufgeklappt ist.
@@ -270,11 +308,17 @@ final class WorkoutSessionViewModel: Identifiable {
             // startRestTimer() aktualisiert die Live Activity bereits selbst -
             // sonst genau einmal hier, nie beide (kein doppelter Activity.update).
             // Warm-up-Sätze pausieren nie - der Punkt eines Warm-ups ist,
-            // ohne volle Erholung direkt weiterzumachen. War es (bei einem
+            // ohne volle Erholung direkt weiterzumachen. Bei einem per
+            // Superset verknüpften Satz erst pausieren, wenn AUCH der
+            // Partner-Satz derselben Runde fertig ist - sonst würde man
+            // mitten im Superset unnötig pausieren, statt direkt zur
+            // zweiten Übung überzugehen. War es (bei einem freistehenden
             // Arbeitssatz) der letzte offene Satz der gesamten Session, gibt
             // es nichts mehr, wonach pausiert werden müsste - dann direkt
             // finalisieren statt den Pausentimer zu öffnen.
-            if setLog.isWarmup || isWorkoutComplete {
+            if let partnerSet = supersetPartnerSet(for: setLog), !partnerSet.isCompleted {
+                updateLiveActivity()
+            } else if setLog.isWarmup || isWorkoutComplete {
                 updateLiveActivity()
             } else {
                 startRestTimer()
@@ -282,6 +326,20 @@ final class WorkoutSessionViewModel: Identifiable {
         } else {
             updateLiveActivity()
         }
+    }
+
+    /// Der Satz derselben Runde (gleicher `setIndex`) der per Superset
+    /// verknüpften Partner-Übung, sofern `setLog`s Übung überhaupt verknüpft
+    /// ist - Grundlage für das Pausentimer-Gating in `toggleSetCompletion`.
+    /// `nil` sowohl wenn nicht verknüpft als auch im freien Training (kein
+    /// `session.plan`).
+    private func supersetPartnerSet(for setLog: SetLog) -> SetLog? {
+        guard let plan = session.plan,
+              let own = plan.plannedExercises.first(where: { $0.exerciseName == setLog.exerciseName }),
+              let groupID = own.supersetGroupID,
+              let partner = plan.plannedExercises.first(where: { $0.supersetGroupID == groupID && $0.exerciseName != setLog.exerciseName })
+        else { return nil }
+        return session.setLogs.first { $0.exerciseName == partner.exerciseName && $0.setIndex == setLog.setIndex && !$0.isWarmup }
     }
 
     func updateSet(_ setLog: SetLog, reps: Int, weightKg: Double) {
@@ -333,6 +391,44 @@ final class WorkoutSessionViewModel: Identifiable {
         context.delete(setLog)
         persist()
         updateLiveActivity()
+    }
+
+    /// Verknüpft zwei Übungen des aktuellen Plans als Superset (gilt für die
+    /// ganze Session, nicht nur die aktuelle Runde - siehe Plan). Löst
+    /// zuerst beide Seiten aus einer eventuell schon bestehenden Gruppe
+    /// (deckt den "Übung B von A weg auf C ziehen"-Re-Link-Fall ab, ohne A
+    /// mit einer verwaisten `supersetGroupID` zurückzulassen). Nur für
+    /// geplante Sessions - `session.plan == nil` macht nichts.
+    func linkSuperset(attachedExerciseName: String, toPrimaryExerciseName primaryExerciseName: String) {
+        guard let plan = session.plan,
+              let primary = plan.plannedExercises.first(where: { $0.exerciseName == primaryExerciseName }),
+              let attached = plan.plannedExercises.first(where: { $0.exerciseName == attachedExerciseName }),
+              primary !== attached else { return }
+        unlinkSuperset(exerciseName: attachedExerciseName)
+        unlinkSuperset(exerciseName: primaryExerciseName)
+        let groupID = UUID()
+        primary.supersetGroupID = groupID
+        attached.supersetGroupID = groupID
+        persist()
+    }
+
+    /// Löst eine Übung aus ihrer Superset-Gruppe. Bleibt danach nur noch ein
+    /// einziges Mitglied in der Gruppe übrig, wird auch dessen
+    /// `supersetGroupID` auf `nil` gesetzt - eine Gruppe mit nur einem
+    /// Mitglied ist kein Superset mehr und würde sonst als verwaiste,
+    /// unsichtbare Verknüpfung liegen bleiben (`sessionRows` fände dann nie
+    /// einen Partner, aber `supersetPartnerSet` bliebe stumpf bis zum
+    /// nächsten Link-Vorgang inkonsistent).
+    func unlinkSuperset(exerciseName: String) {
+        guard let plan = session.plan,
+              let target = plan.plannedExercises.first(where: { $0.exerciseName == exerciseName }),
+              let groupID = target.supersetGroupID else { return }
+        target.supersetGroupID = nil
+        let remaining = plan.plannedExercises.filter { $0.supersetGroupID == groupID }
+        if remaining.count == 1 {
+            remaining[0].supersetGroupID = nil
+        }
+        persist()
     }
 
     func startRestTimer() {

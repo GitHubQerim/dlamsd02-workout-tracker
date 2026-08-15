@@ -79,9 +79,13 @@ enum DSColor {
     /// voneinander änderbar bleiben.
     static let fieldFill = Color.white.opacity(0.06)
 
-    /// Top-anchored teal wash behind screen headers — the system's only gradient.
-    /// Two stops (not several intermediate greens) so the fade to black reads
-    /// as one smooth, even transition instead of visible banding.
+    /// Top-anchored teal wash behind screen headers. Also reused (top-to-
+    /// bottom fits directly) for `MergedExerciseCard`s left accent bar —
+    /// deliberately the SAME token, not a lookalike second gradient, to keep
+    /// this the app's one gradient look rather than let near-duplicates
+    /// proliferate. Two stops (not several intermediate greens) so the fade
+    /// to black reads as one smooth, even transition instead of visible
+    /// banding.
     static let headerWash = LinearGradient(
         colors: [green900, surfaceBase],
         startPoint: .top,

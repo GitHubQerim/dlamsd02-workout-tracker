@@ -5,3 +5,4 @@
 /// geblieben und bleiben einfache, unqualifizierte Top-Level-Klassen - für
 /// sie ist kein Typealias nötig.
 typealias SetLog = SchemaV2.SetLog
+typealias PlannedExercise = SchemaV3.PlannedExercise

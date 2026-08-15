@@ -206,29 +206,70 @@ struct WorkoutSessionView: View {
     @ViewBuilder
     private var strengthContent: some View {
         VStack(spacing: DSSpacing.cardGap) {
-            ForEach(viewModel.exerciseSections) { section in
-                if section.name == activeExerciseName {
-                    ActiveExerciseCard(
-                        section: section,
-                        viewModel: viewModel,
-                        namespace: expandNamespace,
-                        onSetToggled: handleSetToggled,
-                        onFieldFocusChange: { focused in
-                            withAnimation(DSMotion.base) {
-                                isAnyValueFieldFocused = focused
+            ForEach(viewModel.sessionRows) { row in
+                switch row {
+                case .single(let section):
+                    if section.name == activeExerciseName {
+                        ActiveExerciseCard(
+                            section: section,
+                            viewModel: viewModel,
+                            namespace: expandNamespace,
+                            onSetToggled: handleSetToggled,
+                            onFieldFocusChange: { focused in
+                                withAnimation(DSMotion.base) {
+                                    isAnyValueFieldFocused = focused
+                                }
+                            }
+                        )
+                        .id(section.name)
+                    } else {
+                        CollapsedExerciseRow(
+                            name: section.name,
+                            isComplete: viewModel.isExerciseComplete(section.name),
+                            namespace: expandNamespace,
+                            action: {
+                                withAnimation(DSMotion.expand) { expandedExerciseName = section.name }
+                            }
+                        )
+                        .id(section.name)
+                    }
+                case .superset(let primary, let attached):
+                    // Eine verschmolzene Card gilt als "aktiv", sobald EINE
+                    // der beiden Übungen die aktive ist - Tippen auf
+                    // irgendeine Seite klappt das ganze Paar auf.
+                    if primary.name == activeExerciseName || attached.name == activeExerciseName {
+                        MergedExerciseCard(
+                            primary: primary,
+                            attached: attached,
+                            viewModel: viewModel,
+                            namespace: expandNamespace,
+                            onSetToggled: handleSetToggled,
+                            onFieldFocusChange: { focused in
+                                withAnimation(DSMotion.base) {
+                                    isAnyValueFieldFocused = focused
+                                }
+                            }
+                        )
+                        .id(primary.name)
+                    } else {
+                        VStack(spacing: DSSpacing.cardGap) {
+                            CollapsedExerciseRow(
+                                name: primary.name,
+                                isComplete: viewModel.isExerciseComplete(primary.name),
+                                namespace: expandNamespace
+                            ) {
+                                withAnimation(DSMotion.expand) { expandedExerciseName = primary.name }
+                            }
+                            CollapsedExerciseRow(
+                                name: attached.name,
+                                isComplete: viewModel.isExerciseComplete(attached.name),
+                                namespace: expandNamespace
+                            ) {
+                                withAnimation(DSMotion.expand) { expandedExerciseName = primary.name }
                             }
                         }
-                    )
-                    .id(section.name)
-                } else {
-                    CollapsedExerciseRow(
-                        name: section.name,
-                        isComplete: viewModel.isExerciseComplete(section.name),
-                        namespace: expandNamespace
-                    ) {
-                        withAnimation(DSMotion.expand) { expandedExerciseName = section.name }
+                        .id(primary.name)
                     }
-                    .id(section.name)
                 }
             }
         }
@@ -240,17 +281,33 @@ struct WorkoutSessionView: View {
         }
     }
 
-    /// Wird von `ActiveExerciseCard` nach jedem Satz-Toggle aufgerufen -
-    /// verwaltet den Übungsnamen für den Pausen-Timer-Kontext und die
-    /// Auto-Advance-Logik, weil `expandedExerciseName`/`restTimerExerciseName`
-    /// hier in `WorkoutSessionView`, nicht in der Karte, als State leben.
+    /// Wird von `ActiveExerciseCard`/`MergedExerciseCard` nach jedem
+    /// Satz-Toggle aufgerufen - verwaltet den Übungsnamen für den
+    /// Pausen-Timer-Kontext und die Auto-Advance-Logik, weil
+    /// `expandedExerciseName`/`restTimerExerciseName` hier in
+    /// `WorkoutSessionView`, nicht in der Karte, als State leben. Bei einer
+    /// Superset-Übung erst weiterspringen, wenn AUCH die Partner-Übung
+    /// komplett ist - sonst würde der Accordion von einem verschmolzenen
+    /// Paar wegspringen, während die andere Hälfte noch offene Sätze hat.
     private func handleSetToggled(_ setLog: SetLog, exerciseName: String) {
         guard setLog.isCompleted else { return }
         restTimerExerciseName = exerciseName
-        if viewModel.isExerciseComplete(exerciseName) {
-            withAnimation(DSMotion.expand) {
-                expandedExerciseName = viewModel.firstIncompleteExerciseName
+        guard viewModel.isExerciseComplete(exerciseName) else { return }
+
+        let row = viewModel.sessionRows.first { row in
+            switch row {
+            case .single(let section): section.name == exerciseName
+            case .superset(let primary, let attached): primary.name == exerciseName || attached.name == exerciseName
             }
+        }
+        let bothHalvesComplete: Bool = {
+            guard case .superset(let primary, let attached) = row else { return true }
+            return viewModel.isExerciseComplete(primary.name) && viewModel.isExerciseComplete(attached.name)
+        }()
+        guard bothHalvesComplete else { return }
+
+        withAnimation(DSMotion.expand) {
+            expandedExerciseName = viewModel.firstIncompleteExerciseName
         }
     }
 

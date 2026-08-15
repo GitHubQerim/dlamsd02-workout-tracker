@@ -1,9 +1,9 @@
 import SwiftData
+import Foundation
 
-/// Eingefrorene V1-Form (siehe `SchemaV3+PlannedExercise.swift` für die
-/// aktuelle Form mit `supersetGroupID`). Nicht mehr direkt verwenden -
-/// `CurrentSchema.swift` zeigt per Typealias auf die jeweils aktuelle Version.
-extension SchemaV1 {
+/// Aktuelle Form von `PlannedExercise` (siehe `CurrentSchema.swift`) - fügt
+/// gegenüber `SchemaV1.PlannedExercise` das Feld `supersetGroupID` hinzu.
+extension SchemaV3 {
     @Model
     final class PlannedExercise {
         var orderIndex: Int
@@ -23,12 +23,20 @@ extension SchemaV1 {
 
         var plan: Workout?
 
+        /// Gruppen-UUID statt direktem `partner`-Pointer - zwei
+        /// `PlannedExercise`-Zeilen mit derselben nicht-nil UUID sind
+        /// Superset-Partner. Erweitert sich sauber auf künftige Tri-/
+        /// Giant-Sets (N Mitglieder teilen eine UUID), ohne bidirektionale
+        /// Pointer-Pflege bei jedem Re-Link. `nil` = nicht verknüpft.
+        var supersetGroupID: UUID?
+
         init(
             orderIndex: Int,
             exercise: Exercise,
             targetSets: Int? = nil,
             targetReps: Int? = nil,
-            targetWeightKg: Double? = nil
+            targetWeightKg: Double? = nil,
+            supersetGroupID: UUID? = nil
         ) {
             self.orderIndex = orderIndex
             self.exercise = exercise
@@ -36,6 +44,7 @@ extension SchemaV1 {
             self.targetSets = targetSets
             self.targetReps = targetReps
             self.targetWeightKg = targetWeightKg
+            self.supersetGroupID = supersetGroupID
         }
     }
 }
