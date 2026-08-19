@@ -2,7 +2,6 @@ import HealthKit
 
 enum HealthKitServiceError: Error {
     case healthDataUnavailable
-    case attachEnergyFailed
 }
 
 /// Reale `HKHealthStore`-Implementierung von `HealthKitServicing` (ADR 0011).
@@ -68,48 +67,6 @@ final class HealthKitService: HealthKitServicing, @unchecked Sendable {
         )
         let samples = try await descriptor.result(for: healthStore)
         return samples.first?.quantity.doubleValue(for: .gramUnit(with: .kilo))
-    }
-
-    /// Bewusst NICHT Teil von `HealthKitServicing` - dient ausschließlich dem
-    /// einmaligen DEBUG-Backfill in `SettingsViewModel` (siehe dort), der
-    /// nach einmaliger Nutzung wieder entfernt wird. Ein dauerhafter,
-    /// gemeinsam von echtem Service und Mock zu tragender Protokoll-Vertrag
-    /// wäre für diesen Einmal-Zweck unverhältnismäßig (YAGNI).
-    func attachEnergy(kcal: Double, toWorkoutWithHealthKitUUID healthKitUUID: UUID) async throws {
-        let predicate = HKQuery.predicateForObject(with: healthKitUUID)
-        let descriptor = HKSampleQueryDescriptor(
-            predicates: [.workout(predicate)],
-            sortDescriptors: []
-        )
-        guard let workout = try await descriptor.result(for: healthStore).first else { return }
-
-        let sample = HKQuantitySample(
-            type: HKQuantityType(.activeEnergyBurned),
-            quantity: HKQuantity(unit: .kilocalorie(), doubleValue: kcal),
-            start: workout.startDate,
-            end: workout.endDate
-        )
-        try await healthStore.save(sample)
-        // `add(_:to:completion:)` ist seit macOS 14/iOS 17 als API zugunsten
-        // von `HKWorkoutBuilder` deprecated, hat aber keine async-Variante
-        // (einzige Stelle im Projekt, die einen Continuation-Wrapper
-        // braucht) - `HKWorkoutBuilder` erzeugt jedoch nur neue Workouts,
-        // kann einem bereits gespeicherten `HKWorkout` nicht nachträglich
-        // eine Angabe hinzufügen. Für dieses Einmal-Backfill bleibt die
-        // deprecated API bewusst die einzig anwendbare (bei Neuanlage wird
-        // totalEnergyBurned stattdessen direkt im HKWorkout-Init übergeben,
-        // siehe oben - dort kommt die deprecated API nicht zum Einsatz).
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            healthStore.add([sample], to: workout) { success, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else if success {
-                    continuation.resume()
-                } else {
-                    continuation.resume(throwing: HealthKitServiceError.attachEnergyFailed)
-                }
-            }
-        }
     }
 
     func deleteSession(healthKitUUID: UUID) async throws {

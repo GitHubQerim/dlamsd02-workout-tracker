@@ -55,7 +55,6 @@
 		64634F6E6D02534E49106609 /* SchemaV1+PersonalRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 826A3BA69E07B8C4B4AFAC94 /* SchemaV1+PersonalRecord.swift */; };
 		64BDFFF7D9773659541DCF26 /* PreviousSessionComparisonCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02FB8A6EE359FFE8DCB7D641 /* PreviousSessionComparisonCard.swift */; };
 		66E1ABCF21B5B6F336CC1831 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90EDE269C4D8C0D81994026F /* Colors.swift */; };
-		6833FEF5D3A0470DB9C3A4DB /* PersonalPlanSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04752E739AFE0BFB38E1A16D /* PersonalPlanSeeder.swift */; };
 		68C42F5BFCB2A59D0286F8AF /* WorkoutSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AC690E6F15746A8B4C2C44 /* WorkoutSessionView.swift */; };
 		70839D0DD6C394334055685D /* DSProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B3A8DDC438A069C669E5304 /* DSProgressRing.swift */; };
 		719DE629A492A528654F4E66 /* RestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C02823194615D7E26E386B3C /* RestTimerView.swift */; };
@@ -65,7 +64,6 @@
 		788EBD095ACFD0CF48BDA4EE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE9617577EC2B1EE77CC2E63 /* Assets.xcassets */; };
 		78F2BFC5B6E8E58731DC2853 /* RankReconciliation.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAD5BB49B4F8211AD748124E /* RankReconciliation.swift */; };
 		798C53DD2E5E3EC27DA6DABB /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C2D48701CEFFAB8922366E8 /* HealthKitService.swift */; };
-		799216C53983448054A9F0CC /* PersonalPlanSeederTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF12E723F978CB697FC373C5 /* PersonalPlanSeederTests.swift */; };
 		7A0F859389A5BE397B2B7E22 /* WorkoutSessionLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17A68AF8CF7CF462789B406 /* WorkoutSessionLiveActivity.swift */; };
 		7B38F4CD3609B10CB7FDAADE /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AAF9B4E9173475EF797226C /* DashboardView.swift */; };
 		7B64ECAD42DF9158C32821EB /* HeatmapWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51A024FD089A0DC5B698690 /* HeatmapWidget.swift */; };
@@ -171,7 +169,6 @@
 		02B44F2E3329C3B2F7D11F03 /* WorkoutProgramNextEntryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProgramNextEntryTests.swift; sourceTree = "<group>"; };
 		02FB8A6EE359FFE8DCB7D641 /* PreviousSessionComparisonCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviousSessionComparisonCard.swift; sourceTree = "<group>"; };
 		03D99329D2EDA9EDD0AD4BDF /* DayCount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayCount.swift; sourceTree = "<group>"; };
-		04752E739AFE0BFB38E1A16D /* PersonalPlanSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalPlanSeeder.swift; sourceTree = "<group>"; };
 		0708FC1DE47BA8E8E88A568D /* WorkoutsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutsView.swift; sourceTree = "<group>"; };
 		0994647EEAC77F254037AC0B /* RankTier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankTier.swift; sourceTree = "<group>"; };
 		09D35704C231EF78FFB4599D /* SchemaV1+RankState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+RankState.swift"; sourceTree = "<group>"; };
@@ -252,7 +249,6 @@
 		B7954CCBD829E66C2456FDF9 /* SchemaV1+ChallengeProgressEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SchemaV1+ChallengeProgressEntry.swift"; sourceTree = "<group>"; };
 		BBC30F40BAB3CB81E363B26A /* ChallengesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengesView.swift; sourceTree = "<group>"; };
 		BDF513B74434682866955CBD /* ExerciseSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseSeeder.swift; sourceTree = "<group>"; };
-		BF12E723F978CB697FC373C5 /* PersonalPlanSeederTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalPlanSeederTests.swift; sourceTree = "<group>"; };
 		C02823194615D7E26E386B3C /* RestTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerView.swift; sourceTree = "<group>"; };
 		C135DD9A3A8750084C9E8C95 /* RankSectionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankSectionCard.swift; sourceTree = "<group>"; };
 		C2AC690E6F15746A8B4C2C44 /* WorkoutSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionView.swift; sourceTree = "<group>"; };
@@ -362,7 +358,6 @@
 			children = (
 				E872799DD96BDF2469FF5C83 /* ChallengeSeeder.swift */,
 				BDF513B74434682866955CBD /* ExerciseSeeder.swift */,
-				04752E739AFE0BFB38E1A16D /* PersonalPlanSeeder.swift */,
 			);
 			path = Seed;
 			sourceTree = "<group>";
@@ -483,7 +478,6 @@
 				FF8A26F8783E87BBE67F2BB5 /* HealthKitImportViewModelTests.swift */,
 				AEFB1B089F70B9DCEEF2A128 /* LiveActivityContentStateTests.swift */,
 				52C6FE587C01375FFA815EB3 /* ModelTests.swift */,
-				BF12E723F978CB697FC373C5 /* PersonalPlanSeederTests.swift */,
 				AD4B6872789BA77DBA1E3D6E /* RankTests.swift */,
 				99438448D197E4D1601D1F8A /* SettingsViewModelTests.swift */,
 				44DF0B8D665CFD0171B24381 /* TestSupport.swift */,
@@ -742,7 +736,6 @@
 				3C7B4987189BE0A352677B1E /* LiveActivityContentStateTests.swift in Sources */,
 				841BAEB43230CD3A4932A96B /* MockHealthKitService.swift in Sources */,
 				7DA113EB04A7519368820467 /* ModelTests.swift in Sources */,
-				799216C53983448054A9F0CC /* PersonalPlanSeederTests.swift in Sources */,
 				3FC09BFF63592C04E1DEC808 /* RankTests.swift in Sources */,
 				256369B8CCAFACD807EDC18A /* SettingsViewModelTests.swift in Sources */,
 				EAB5907339D101CCC12CDBCD /* TestSupport.swift in Sources */,
@@ -799,7 +792,6 @@
 				AAD745E97071781BF87320CA /* ModelNavigationID.swift in Sources */,
 				84DE745B11CF1FF871AB6633 /* Motion.swift in Sources */,
 				FE6612CD8E1F8DF7EF79473D /* MuscleGroup.swift in Sources */,
-				6833FEF5D3A0470DB9C3A4DB /* PersonalPlanSeeder.swift in Sources */,
 				C6B55FD643A9DFDD73CB881A /* PersonalRecordDetection.swift in Sources */,
 				D40DDF020C738F1390588C3D /* PersonalRecordRow.swift in Sources */,
 				64BDFFF7D9773659541DCF26 /* PreviousSessionComparisonCard.swift in Sources */,
