@@ -378,16 +378,47 @@ final class WorkoutSessionViewModel: Identifiable {
     }
 
     private func updateLiveActivity() {
-        guard let liveActivity else { return }
+        guard liveActivity != nil else { return }
         let state = liveActivityContentState
-        Task { await liveActivity.update(.init(state: state, staleDate: nil)) }
+        let sessionID = session.id
+        Task { await Self.updateActivity(sessionID: sessionID, state: state) }
     }
 
     private func endLiveActivity() {
-        guard let liveActivity else { return }
+        guard liveActivity != nil else { return }
         let state = liveActivityContentState
-        Task { await liveActivity.end(.init(state: state, staleDate: nil), dismissalPolicy: .immediate) }
+        let sessionID = session.id
+        Task { await Self.endActivity(sessionID: sessionID, state: state) }
         self.liveActivity = nil
+    }
+
+    /// `Activity` ist nicht `Sendable`, `update`/`end` sind `nonisolated async`.
+    /// Würde die im ViewModel gehaltene Instanz direkt an den Task übergeben,
+    /// verließe sie die MainActor-Region, obwohl `self` sie weiterhält - unter
+    /// Swift 6 ein Fehler. Deshalb wird die Activity hier nonisolated frisch
+    /// über dieselbe `activities`-Suche wie in `attachOrStartLiveActivity`
+    /// nachgeschlagen; über die Grenze gehen nur `UUID` und `ContentState`.
+    private nonisolated static func activity(
+        for sessionID: UUID
+    ) -> Activity<WorkoutSessionActivityAttributes>? {
+        Activity<WorkoutSessionActivityAttributes>.activities
+            .first { $0.attributes.sessionID == sessionID }
+    }
+
+    private nonisolated static func updateActivity(
+        sessionID: UUID,
+        state: WorkoutSessionActivityAttributes.ContentState
+    ) async {
+        guard let activity = activity(for: sessionID) else { return }
+        await activity.update(.init(state: state, staleDate: nil))
+    }
+
+    private nonisolated static func endActivity(
+        sessionID: UUID,
+        state: WorkoutSessionActivityAttributes.ContentState
+    ) async {
+        guard let activity = activity(for: sessionID) else { return }
+        await activity.end(.init(state: state, staleDate: nil), dismissalPolicy: .immediate)
     }
 
     /// Nicht `private`, damit die Projektion aus ViewModel-State direkt
