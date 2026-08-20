@@ -24,6 +24,24 @@ struct HealthKitImportView: View {
                         }
                     }
 
+                    // Kein Bestätigungsdialog: der Import ist nicht destruktiv
+                    // und über die normale Session-Löschung rücknehmbar.
+                    if !viewModel.importableWorkouts.isEmpty {
+                        DSButton(
+                            title: "Alle importieren (\(viewModel.importableWorkouts.count))",
+                            fullWidth: true
+                        ) {
+                            viewModel.importAllSessions()
+                        }
+                        // Während `refresh()` läuft, steht noch die alte Liste
+                        // im Screen. Ein Import in diesem Moment würde von der
+                        // laufenden Abfrage überschrieben - sie kennt die eben
+                        // vergebenen `healthKitUUID`s noch nicht und spielte
+                        // die importierten Workouts wieder ein, ein zweiter
+                        // Tap legte sie doppelt an.
+                        .disabled(viewModel.isRefreshing)
+                    }
+
                     ForEach(viewModel.importableWorkouts) { sample in
                         DSCard {
                             HStack {
