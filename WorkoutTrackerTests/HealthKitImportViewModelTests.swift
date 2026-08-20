@@ -95,6 +95,128 @@ struct HealthKitImportViewModelTests {
         #expect(viewModel.importableWorkouts.isEmpty)
     }
 
+    @Test func importAllSessionsImportsEveryWorkoutAndClearsList() async throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let mock = MockHealthKitService()
+        mock.importableWorkouts = descendingSamplesOnConsecutiveDays()
+
+        let viewModel = HealthKitImportViewModel(context: context, healthKitService: mock)
+        await viewModel.refresh()
+        #expect(viewModel.importableWorkouts.count == 3)
+
+        viewModel.importAllSessions()
+
+        #expect(try context.fetch(FetchDescriptor<WorkoutSession>()).count == 3)
+        #expect(viewModel.importableWorkouts.isEmpty)
+    }
+
+    /// Sichert die Sortier-Entscheidung in `importAllSessions()` ab: ohne das
+    /// Umdrehen der (absteigenden) Listenreihenfolge bekämen die älteren
+    /// Importe wegen des Monotonie-Clamps in `RankEngine.reconcile` weder
+    /// Tages-Bonus noch Streak-Boost, und der Elo-Wert fiele auf den einer
+    /// einzelnen Session zurück.
+    @Test func importAllSessionsAwardsDailyBonusPerTrainingDay() async throws {
+        let samples = descendingSamplesOnConsecutiveDays()
+
+        let bulkContainer = try makeInMemoryContainer()
+        let mock = MockHealthKitService()
+        mock.importableWorkouts = samples
+        let bulkViewModel = HealthKitImportViewModel(
+            context: bulkContainer.mainContext,
+            healthKitService: mock
+        )
+        await bulkViewModel.refresh()
+        bulkViewModel.importAllSessions()
+
+        let singleContainer = try makeInMemoryContainer()
+        let singleViewModel = HealthKitImportViewModel(
+            context: singleContainer.mainContext,
+            healthKitService: MockHealthKitService()
+        )
+        for sample in samples.reversed() {
+            singleViewModel.importSession(sample)
+        }
+
+        // Referenz: nur das jüngste Sample importiert - der Wert, auf den der
+        // Bulk-Import ohne aufsteigende Sortierung zurückfiele.
+        let singleDayContainer = try makeInMemoryContainer()
+        HealthKitImportViewModel(
+            context: singleDayContainer.mainContext,
+            healthKitService: MockHealthKitService()
+        ).importSession(samples[0])
+
+        let bulkElo = RankState.fetchOrCreate(in: bulkContainer.mainContext).currentElo
+        let singleElo = RankState.fetchOrCreate(in: singleContainer.mainContext).currentElo
+        let singleDayElo = RankState.fetchOrCreate(in: singleDayContainer.mainContext).currentElo
+        #expect(bulkElo == singleElo)
+        #expect(bulkElo > singleDayElo)
+    }
+
+    /// Ergänzt den Test darüber um die Konfiguration, die im echten Betrieb
+    /// überwiegt: sobald der Challenges-Tab einmal offen war, steht
+    /// `lastProcessedDay` auf gestern (siehe
+    /// `RankReconciliation.reconcileDecayOnly`). Dann bekommt nur noch ein
+    /// Sample von heute einen Tages-Bonus - der Bulk-Import bleibt aber auch
+    /// hier deckungsgleich mit Einzelimports von alt nach neu, und genau das
+    /// ist die Zusage: er bildet die Rang-Logik ab, statt sie zu erweitern.
+    @Test func importAllSessionsMatchesSingleImportsWithExistingRankState() async throws {
+        let samples = descendingSamplesOnConsecutiveDays()
+
+        let bulkContainer = try makeInMemoryContainer()
+        seedRankStateAnchoredYesterday(in: bulkContainer.mainContext)
+        let mock = MockHealthKitService()
+        mock.importableWorkouts = samples
+        let bulkViewModel = HealthKitImportViewModel(
+            context: bulkContainer.mainContext,
+            healthKitService: mock
+        )
+        await bulkViewModel.refresh()
+        bulkViewModel.importAllSessions()
+
+        let singleContainer = try makeInMemoryContainer()
+        seedRankStateAnchoredYesterday(in: singleContainer.mainContext)
+        let singleViewModel = HealthKitImportViewModel(
+            context: singleContainer.mainContext,
+            healthKitService: MockHealthKitService()
+        )
+        for sample in samples.reversed() {
+            singleViewModel.importSession(sample)
+        }
+
+        #expect(
+            RankState.fetchOrCreate(in: bulkContainer.mainContext).currentElo
+                == RankState.fetchOrCreate(in: singleContainer.mainContext).currentElo
+        )
+    }
+
+    /// `fetchOrCreate` legt eine frische Zeile mit `lastProcessedDay == gestern`
+    /// an - derselbe Zustand, den der erste Besuch des Challenges-Tabs
+    /// hinterlässt.
+    private func seedRankStateAnchoredYesterday(in context: ModelContext) {
+        _ = RankState.fetchOrCreate(in: context)
+        try? context.save()
+    }
+
+    /// Drei Workouts an drei aufeinanderfolgenden Kalendertagen, neueste
+    /// zuerst - so wie `fetchImportableCardioWorkouts` sie liefert.
+    private func descendingSamplesOnConsecutiveDays() -> [HealthKitWorkoutSample] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        return (0...2).map { daysAgo in
+            let start = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                .addingTimeInterval(10 * 3600)
+            return HealthKitWorkoutSample(
+                id: UUID(),
+                hkActivityType: .running,
+                start: start,
+                end: start.addingTimeInterval(1800),
+                totalDistanceMeters: 4000,
+                averageHeartRate: nil
+            )
+        }
+    }
+
     @Test func importSessionUpdatesRankProgress() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
