@@ -12,7 +12,7 @@ import SwiftData
 @MainActor
 func makeInMemoryContainer() throws -> ModelContainer {
     try ModelContainer(
-        for: Schema(versionedSchema: SchemaV1.self),
+        for: Schema(versionedSchema: SchemaV2.self),
         migrationPlan: WorkoutTrackerMigrationPlan.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
     )
