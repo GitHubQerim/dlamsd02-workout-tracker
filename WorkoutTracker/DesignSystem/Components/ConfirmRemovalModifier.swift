@@ -2,12 +2,15 @@ import SwiftUI
 
 extension View {
     /// Bestätigungs-Dialog vor dem endgültigen Entfernen einer Zeile aus
-    /// einer Editor-Liste (Übungen, Segmente, Plan-Tage) - dieselbe Form an
-    /// mehreren Stellen (`WorkoutEditorView`, `WorkoutProgramEditorView`),
-    /// deshalb als eine gemeinsame View-Extension statt mehrfach dupliziert.
-    /// `pendingID` wird von `.onDelete` gesetzt statt die Entfernung direkt
-    /// auszuführen; erst der "Entfernen"-Button hier ruft `onConfirm` auf.
-    func confirmRemoval(title: String, pendingID: Binding<UUID?>, onConfirm: @escaping (UUID) -> Void) -> some View {
+    /// einer Liste (Übungen, Segmente, Plan-Tage, Sätze) - dieselbe Form an
+    /// mehreren Stellen (`WorkoutEditorView`, `WorkoutProgramEditorView`,
+    /// `ActiveExerciseCard`), deshalb als eine gemeinsame View-Extension
+    /// statt mehrfach dupliziert. `pendingID` wird von `.onDelete` gesetzt
+    /// statt die Entfernung direkt auszuführen; erst der "Entfernen"-Button
+    /// hier ruft `onConfirm` auf. Generisch über die ID statt fest auf
+    /// `UUID` - `SetLog`s Identität ist SwiftDatas `PersistentIdentifier`,
+    /// nicht ein eigenes `UUID`-Feld wie bei den Editor-Drafts.
+    func confirmRemoval<ID: Hashable>(title: String, pendingID: Binding<ID?>, onConfirm: @escaping (ID) -> Void) -> some View {
         confirmationDialog(
             title,
             isPresented: Binding(
