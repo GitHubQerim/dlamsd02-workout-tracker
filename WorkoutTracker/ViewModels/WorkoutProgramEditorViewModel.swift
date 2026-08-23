@@ -109,6 +109,7 @@ final class WorkoutProgramEditorViewModel {
         do {
             try context.save()
             Self.assertAtMostOneDefault(in: context)
+            WidgetSnapshotRefresher.refresh(context: context)
             return true
         } catch {
             validationMessage = "Speichern fehlgeschlagen: \(error.localizedDescription)"
@@ -139,6 +140,7 @@ final class WorkoutProgramEditorViewModel {
         setDefault(program, in: context)
         try? context.save()
         assertAtMostOneDefault(in: context)
+        WidgetSnapshotRefresher.refresh(context: context)
     }
 
     private static func assertAtMostOneDefault(in context: ModelContext) {
